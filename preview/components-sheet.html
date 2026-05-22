@@ -1,0 +1,30 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="../tailwind.js"></script>
+</head>
+<body class="m-0 p-[22px] min-h-[240px] font-sans bg-base flex items-stretch justify-center">
+  <div class="w-[360px] border border-white/[0.06] rounded-xl p-[18px] flex flex-col gap-3"
+       style="background:rgba(44,44,46,0.92);backdrop-filter:blur(60px) saturate(180%);box-shadow:0 24px 60px -12px rgba(0,0,0,0.7),0 8px 24px rgba(0,0,0,0.5)">
+    <div class="w-9 h-1 rounded-[2px] bg-fg4 self-center mb-1"></div>
+    <div>
+      <div class="font-serif italic text-3xl text-fg1 leading-none">Pick a brain.</div>
+      <div class="text-sm text-fg2 leading-snug mt-1.5">One provider runs the chat at a time. You can switch later.</div>
+    </div>
+    <div class="bg-card rounded-md px-3.5">
+      <div class="flex items-center py-2.5 border-b border-hairline gap-2.5 text-sm text-fg1">
+        <div class="w-6 h-6 rounded-md inline-flex items-center justify-center text-white text-xs font-semibold" style="background:#FF9F0A">G</div>
+        Groq <span class="ml-auto text-fg3">›</span>
+      </div>
+      <div class="flex items-center py-2.5 border-b border-hairline gap-2.5 text-sm text-fg1">
+        <div class="w-6 h-6 rounded-md inline-flex items-center justify-center text-white text-xs font-semibold" style="background:#5E5CE6">OR</div>
+        OpenRouter <span class="ml-auto text-fg3">›</span>
+      </div>
+      <div class="flex items-center py-2.5 gap-2.5 text-sm text-fg1">
+        <div class="w-6 h-6 rounded-md inline-flex items-center justify-center text-white text-xs font-semibold bg-green">●</div>
+        Ollama (local) <span class="ml-auto text-fg3">›</span>
+      </div>
+    </div>
+    <button class="bg-accent text-white border-none p-2.5 rounded-full text-base font-semibold cursor-pointer font-sans">Continue</button>
+  </div>
+</body></html>

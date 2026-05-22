@@ -1,0 +1,29 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="../tailwind.js"></script>
+<style>
+  .btn { font-family: inherit; font-size: 15px; font-weight: 600; padding: 9px 16px; border-radius: 999px; border: none; cursor: pointer; line-height: 1.2; letter-spacing: -0.01em; transition: all 200ms cubic-bezier(0.4,0,0.2,1); }
+</style>
+</head>
+<body class="m-0 p-[22px] bg-window font-sans flex flex-col gap-3">
+  <div class="flex items-center gap-2.5 flex-wrap">
+    <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold min-w-[70px]">Primary</div>
+    <button class="btn bg-accent text-white">Add provider</button>
+    <button class="btn text-white" style="background:var(--color-accent-press)">Add provider</button>
+    <button class="btn bg-accent text-white opacity-40">Add provider</button>
+  </div>
+  <div class="flex items-center gap-2.5 flex-wrap">
+    <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold min-w-[70px]">Secondary</div>
+    <button class="btn bg-card text-fg1">Cancel</button>
+    <button class="btn bg-elevated text-fg1">Cancel</button>
+    <button class="btn bg-transparent text-accent" style="padding:9px 12px">Skip</button>
+    <button class="btn bg-tint-red text-red">Toss</button>
+  </div>
+  <div class="flex items-center gap-2.5 flex-wrap">
+    <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold min-w-[70px]">Icon</div>
+    <button class="btn bg-card text-fg1 inline-flex items-center justify-center" style="width:36px;height:36px;padding:0;border-radius:50%">＋</button>
+    <button class="btn bg-card text-fg1 inline-flex items-center justify-center" style="width:36px;height:36px;padding:0;border-radius:50%">⌘</button>
+    <button class="btn bg-accent text-white inline-flex items-center justify-center" style="width:36px;height:36px;padding:0;border-radius:50%">↑</button>
+  </div>
+</body></html>

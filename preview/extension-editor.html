@@ -1,0 +1,235 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="../tailwind.js"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+
+<!-- CodeMirror 5 — lightweight (~70kb), mobile-friendly, easy CDN, has good JS syntax highlight + linting.
+     v6 is more capable but is bundled-only; v5 ships ready-made UMD assets via cdnjs. -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+
+<style>
+  /* Override CodeMirror chrome to match the gen-app dark surfaces */
+  .CodeMirror {
+    background: var(--bg-base) !important;
+    color: var(--fg1) !important;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.5;
+    height: 100%;
+    border-radius: 10px;
+  }
+  .CodeMirror-gutters { background: var(--bg-base) !important; border-right: 1px solid var(--stroke-soft) !important; }
+  .CodeMirror-linenumber { color: var(--fg3) !important; padding: 0 8px 0 6px; }
+  .CodeMirror-cursor { border-left-color: var(--color-accent) !important; border-left-width: 2px !important; }
+  .CodeMirror-selected { background: rgba(10, 132, 255, 0.22) !important; }
+  .CodeMirror-focused .CodeMirror-selected { background: rgba(10, 132, 255, 0.32) !important; }
+  .CodeMirror-activeline-background { background: rgba(255,255,255,0.02) !important; }
+  .CodeMirror-matchingbracket { color: var(--color-accent) !important; background: rgba(10,132,255,0.18); border-radius: 2px; }
+  /* Syntax tokens — iOS dark palette */
+  .cm-keyword  { color: #FF7AB6; }       /* pink-magenta */
+  .cm-atom     { color: #D2A8FF; }       /* purple */
+  .cm-number   { color: #FF9F0A; }       /* orange */
+  .cm-string   { color: #30D158; }       /* green */
+  .cm-string-2 { color: #30D158; }
+  .cm-def      { color: #5AC8FA; }       /* cyan */
+  .cm-variable { color: var(--fg1); }
+  .cm-variable-2{ color: #64D2FF; }
+  .cm-variable-3{ color: var(--fg1); }
+  .cm-property { color: #FFD60A; }       /* yellow */
+  .cm-operator { color: var(--fg2); }
+  .cm-comment  { color: var(--fg3); font-style: italic; }
+  .cm-meta     { color: var(--color-purple); }
+  .cm-builtin  { color: #5AC8FA; }
+  .cm-tag      { color: #FF7AB6; }
+</style>
+</head>
+<body class="m-0 p-5 bg-window font-sans flex flex-col gap-3 min-h-screen">
+
+  <!-- breadcrumb / nav -->
+  <div class="flex items-center gap-2 text-xs text-fg2">
+    <span class="cursor-pointer">Settings</span>
+    <span class="text-fg4">›</span>
+    <span class="cursor-pointer">Extensions</span>
+    <span class="text-fg4">›</span>
+    <span class="text-fg1 font-semibold font-mono">open-meteo.js</span>
+  </div>
+
+  <!-- header card -->
+  <div class="bg-card rounded-lg p-4 flex items-center gap-3">
+    <div class="w-9 h-9 rounded-md bg-card-elevated flex items-center justify-center"><i data-lucide="puzzle" class="w-5 h-5 text-fg2"></i></div>
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-2">
+        <input value="Open-Meteo" class="bg-transparent border-none outline-none text-fg1 text-base font-semibold font-sans -tracking-[0.012em] min-w-0" />
+        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-tint-green text-green text-[10px] font-semibold">
+          <span class="w-1 h-1 rounded-full bg-green"></span>Saved
+        </span>
+        <span class="text-xs text-fg3 font-mono">v1.2.0</span>
+      </div>
+      <input value="Weather forecasts · 16-day" class="bg-transparent border-none outline-none text-fg2 text-xs w-full font-sans mt-0.5" placeholder="Short description…" />
+    </div>
+    <div class="flex items-center gap-2">
+      <button class="font-sans text-sm font-semibold py-2 px-4 rounded-full cursor-pointer border-none flex items-center gap-1.5"
+              style="background:transparent;color:var(--fg1)">
+        <i data-lucide="play" class="w-4 h-4"></i>Test
+      </button>
+      <button class="font-sans text-sm font-semibold py-2 px-4 rounded-full cursor-pointer border-none flex items-center gap-1.5 bg-accent text-white">
+        <i data-lucide="check" class="w-4 h-4"></i>Save
+      </button>
+    </div>
+  </div>
+
+  <!-- tab strip -->
+  <div class="flex gap-1 border-b border-hairline">
+    <div class="px-3 py-2 text-xs font-medium text-accent border-b-2 border-accent -mb-px flex items-center gap-1.5"><i data-lucide="code" class="w-3.5 h-3.5"></i>open-meteo.js</div>
+    <div class="px-3 py-2 text-xs font-medium text-fg2 border-b-2 border-transparent -mb-px flex items-center gap-1.5"><i data-lucide="settings" class="w-3.5 h-3.5"></i>Manifest</div>
+    <div class="px-3 py-2 text-xs font-medium text-fg2 border-b-2 border-transparent -mb-px flex items-center gap-1.5"><i data-lucide="key" class="w-3.5 h-3.5"></i>Secrets <span class="bg-card-elevated text-fg2 text-[10px] font-mono px-1.5 rounded-full">2</span></div>
+    <div class="px-3 py-2 text-xs font-medium text-fg2 border-b-2 border-transparent -mb-px flex items-center gap-1.5"><i data-lucide="file-text" class="w-3.5 h-3.5"></i>Logs</div>
+  </div>
+
+  <!-- editor + side panel grid -->
+  <div class="grid grid-cols-[1fr_280px] gap-3 flex-1 min-h-[480px]">
+    <!-- code editor pane -->
+    <div class="bg-card rounded-lg p-3 flex flex-col gap-2.5 min-h-0">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold">Source</span>
+          <span class="text-[10px] text-fg2 font-mono">open-meteo.js · 47 lines</span>
+        </div>
+        <div class="flex items-center gap-2 text-fg2">
+          <button class="b-icon"><i data-lucide="undo-2" class="w-4 h-4"></i></button>
+          <button class="b-icon"><i data-lucide="redo-2" class="w-4 h-4"></i></button>
+          <button class="b-icon"><i data-lucide="search" class="w-4 h-4"></i></button>
+          <button class="b-icon"><i data-lucide="settings-2" class="w-4 h-4"></i></button>
+        </div>
+      </div>
+      <div class="flex-1 rounded-md overflow-hidden">
+        <textarea id="editor">// Open-Meteo extension — feeds the @weather widget
+// gen-app passes `ctx` with `secrets`, `widgets`, `fetch`, `emit`.
+export const manifest = {
+  id: "open-meteo",
+  name: "Open-Meteo",
+  version: "1.2.0",
+  refresh: 60, // seconds
+};
+
+export async function run(ctx) {
+  // Read user's location from a global secret OR widget prop
+  const lat = ctx.widget?.props?.lat ?? 40.6782;
+  const lon = ctx.widget?.props?.lon ?? -73.9442;
+
+  const url = new URL("https://api.open-meteo.com/v1/forecast");
+  url.searchParams.set("latitude", lat);
+  url.searchParams.set("longitude", lon);
+  url.searchParams.set("current", "temperature_2m,weather_code,wind_speed_10m");
+  url.searchParams.set("daily", "temperature_2m_max,temperature_2m_min");
+  url.searchParams.set("temperature_unit", ctx.secrets.UNIT ?? "fahrenheit");
+
+  const res = await ctx.fetch(url);
+  if (!res.ok) return ctx.emit({ status: "error", message: \`HTTP \${res.status}\` });
+
+  const data = await res.json();
+  ctx.emit({
+    status: "live",
+    temp: Math.round(data.current.temperature_2m),
+    hi: Math.round(data.daily.temperature_2m_max[0]),
+    lo: Math.round(data.daily.temperature_2m_min[0]),
+    code: data.current.weather_code,
+  });
+}</textarea>
+      </div>
+      <!-- status bar -->
+      <div class="flex items-center justify-between text-[11px] text-fg2 font-mono pt-1.5 border-t border-hairline">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-green"></span>JavaScript</span>
+          <span>UTF-8</span>
+          <span>LF</span>
+          <span>Tab: 2</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span>Ln 14, Col 22</span>
+          <span class="text-green">No issues</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- side panel — sandbox info + permissions + secrets -->
+    <div class="flex flex-col gap-2.5 min-h-0 overflow-y-auto">
+      <!-- permissions -->
+      <div class="bg-card rounded-lg p-3.5 flex flex-col gap-2">
+        <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold">Permissions</div>
+        <div class="flex items-center justify-between text-xs"><span class="text-fg1 flex items-center gap-2"><i data-lucide="globe" class="w-3.5 h-3.5 text-fg2"></i>Network</span><span class="text-green font-mono">api.open-meteo.com</span></div>
+        <div class="flex items-center justify-between text-xs"><span class="text-fg1 flex items-center gap-2"><i data-lucide="hard-drive" class="w-3.5 h-3.5 text-fg2"></i>Storage</span><span class="text-fg3 font-mono">none</span></div>
+        <div class="flex items-center justify-between text-xs"><span class="text-fg1 flex items-center gap-2"><i data-lucide="key" class="w-3.5 h-3.5 text-fg2"></i>Secrets read</span><span class="text-yellow font-mono">UNIT</span></div>
+      </div>
+      <!-- bound secrets -->
+      <div class="bg-card rounded-lg p-3.5 flex flex-col gap-2">
+        <div class="flex items-center justify-between">
+          <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold">Bound secrets</div>
+          <button class="text-[11px] text-accent font-medium">+ Add</button>
+        </div>
+        <div class="flex items-center justify-between bg-base rounded-md px-2.5 py-2 border border-soft">
+          <div class="flex items-center gap-2 min-w-0">
+            <i data-lucide="key" class="w-3.5 h-3.5 text-fg2 shrink-0"></i>
+            <span class="font-mono text-xs text-fg1 truncate">UNIT</span>
+          </div>
+          <span class="font-mono text-[10px] text-fg2">"fahrenheit"</span>
+        </div>
+        <div class="flex items-center justify-between bg-base rounded-md px-2.5 py-2 border border-soft">
+          <div class="flex items-center gap-2 min-w-0">
+            <i data-lucide="key" class="w-3.5 h-3.5 text-fg2 shrink-0"></i>
+            <span class="font-mono text-xs text-fg1 truncate">OPENMETEO_KEY</span>
+          </div>
+          <span class="font-mono text-[10px] text-fg2">••••••8f2c</span>
+        </div>
+      </div>
+      <!-- test output -->
+      <div class="bg-card rounded-lg p-3.5 flex flex-col gap-2">
+        <div class="flex items-center justify-between">
+          <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold">Last test · 92 ms</div>
+          <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-tint-green text-green text-[10px] font-semibold">
+            <span class="w-1 h-1 rounded-full bg-green"></span>OK
+          </span>
+        </div>
+        <div class="bg-base rounded-md p-2.5 font-mono text-[11px] text-fg2 leading-relaxed border border-soft">
+<span class="text-fg3">{</span>
+  <span class="text-accent">status</span>: <span class="text-green">"live"</span>,
+  <span class="text-accent">temp</span>: <span class="text-orange">68</span>,
+  <span class="text-accent">hi</span>: <span class="text-orange">72</span>,
+  <span class="text-accent">lo</span>: <span class="text-orange">58</span>,
+  <span class="text-accent">code</span>: <span class="text-orange">1</span>
+<span class="text-fg3">}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+    // Promote textarea → CodeMirror editor
+    const ta = document.getElementById('editor');
+    if (window.CodeMirror) {
+      CodeMirror.fromTextArea(ta, {
+        mode: 'javascript',
+        lineNumbers: true,
+        autoCloseBrackets: true,
+        matchBrackets: true,
+        styleActiveLine: true,
+        indentUnit: 2,
+        tabSize: 2,
+        smartIndent: true,
+        lineWrapping: false,
+        viewportMargin: Infinity,
+      });
+    }
+  </script>
+
+  <style>
+    .b-icon { background: transparent; border: none; cursor: pointer; padding: 4px; border-radius: 6px; color: var(--fg2); display: inline-flex; }
+    .b-icon:hover { background: var(--bg-hover); color: var(--fg1); }
+  </style>
+</body></html>

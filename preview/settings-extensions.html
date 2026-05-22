@@ -1,0 +1,37 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="../tailwind.js"></script>
+<style>
+  .toggle { width: 38px; height: 22px; border-radius: 11px; background: var(--fg4); position: relative; }
+  .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: 200ms; }
+  .toggle.on { background: var(--color-green); }
+  .toggle.on::after { left: 18px; }
+</style>
+</head>
+<body class="m-0 p-[18px] bg-window font-sans flex flex-col gap-3">
+  <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold">Extensions · 3 of 6 on</div>
+  <div class="bg-card rounded-[10px]">
+    <div class="flex items-center gap-2.5 px-3.5 py-2.5 border-b border-hairline">
+      <div class="w-[22px] h-[22px] rounded-md inline-flex items-center justify-center text-fg2 bg-elevated text-xs shrink-0">⚉</div>
+      <div class="flex-1 min-w-0"><div class="text-sm text-fg1">Yahoo Finance</div><div class="text-[11px] text-fg2">Stock data · 15-min delayed</div></div>
+      <div class="flex gap-2.5 items-center"><span class="text-[10px] text-fg3 font-mono">v0.4.1</span><div class="toggle on"></div></div>
+    </div>
+    <div class="flex items-center gap-2.5 px-3.5 py-2.5 border-b border-hairline">
+      <div class="w-[22px] h-[22px] rounded-md inline-flex items-center justify-center text-fg2 bg-elevated text-xs shrink-0">⚉</div>
+      <div class="flex-1 min-w-0"><div class="text-sm text-fg1">Open-Meteo</div><div class="text-[11px] text-fg2">Weather forecasts · 16-day</div></div>
+      <div class="flex gap-2.5 items-center"><span class="text-[10px] text-fg3 font-mono">v1.2.0</span><div class="toggle on"></div></div>
+    </div>
+    <div class="flex items-center gap-2.5 px-3.5 py-2.5 border-b border-hairline">
+      <div class="w-[22px] h-[22px] rounded-md inline-flex items-center justify-center text-fg2 bg-elevated text-xs shrink-0">⚉</div>
+      <div class="flex-1 min-w-0"><div class="text-sm text-fg1">macOS Calendar</div><div class="text-[11px] text-fg2">Read-only · today + 7 days</div></div>
+      <div class="flex gap-2.5 items-center"><span class="text-[10px] text-fg3 font-mono">native</span><div class="toggle on"></div></div>
+    </div>
+    <div class="flex items-center gap-2.5 px-3.5 py-2.5">
+      <div class="w-[22px] h-[22px] rounded-md inline-flex items-center justify-center text-fg2 bg-elevated text-xs shrink-0">⚉</div>
+      <div class="flex-1 min-w-0"><div class="text-sm text-fg1">RSS</div><div class="text-[11px] text-fg2">Subscribe + summarise feeds</div></div>
+      <div class="flex gap-2.5 items-center"><span class="text-[10px] text-fg3 font-mono">v0.1.0</span><div class="toggle"></div></div>
+    </div>
+  </div>
+  <div class="text-[11px] text-fg2">Extensions run in sandboxed workers. Their data flows to widgets via declarative specs.</div>
+</body></html>

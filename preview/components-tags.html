@@ -1,0 +1,54 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="../tailwind.js"></script>
+</head>
+<body class="m-0 p-[18px] bg-window font-sans grid grid-cols-[1.2fr_1fr] gap-[14px]">
+  <!-- mini canvas with widgets carrying @symbols -->
+  <div class="min-h-[200px] p-3.5 rounded-md grid grid-cols-2 gap-2.5 content-start border border-white/[0.04] relative"
+       style="background-image:radial-gradient(circle,rgba(255,255,255,0.05) 1px,transparent 1px);background-size:16px 16px;background-color:var(--bg-window)">
+    <div class="bg-card rounded-[10px] pt-[22px] pb-2 px-2 relative min-h-[56px] shadow-[0_0_0_2px_var(--color-accent),0_0_0_5px_var(--color-accent-glow)]">
+      <div class="absolute top-1.5 left-2 bg-accent text-white font-mono text-[9px] font-semibold px-1.5 py-px rounded-full">@market</div>
+      <div class="text-[10px] text-fg2">AAPL</div>
+      <div class="text-base font-bold text-fg1 leading-none -tracking-[0.025em] mt-0.5">$224.18</div>
+    </div>
+    <div class="bg-card rounded-[10px] pt-[22px] pb-2 px-2 relative min-h-[56px]">
+      <div class="absolute top-1.5 left-2 bg-accent text-white font-mono text-[9px] font-semibold px-1.5 py-px rounded-full">@market</div>
+      <div class="text-[10px] text-fg2">NVDA</div>
+      <div class="text-base font-bold text-fg1 leading-none -tracking-[0.025em] mt-0.5">$142.30</div>
+    </div>
+    <div class="bg-card rounded-[10px] pt-[22px] pb-2 px-2 relative min-h-[56px]">
+      <div class="absolute top-1.5 left-2 bg-accent text-white font-mono text-[9px] font-semibold px-1.5 py-px rounded-full">@weather</div>
+      <div class="text-[10px] text-fg2">Brooklyn</div>
+      <div class="text-base font-bold text-fg1 leading-none -tracking-[0.025em] mt-0.5">68°</div>
+    </div>
+    <div class="bg-card rounded-[10px] pt-[22px] pb-2 px-2 relative min-h-[56px]">
+      <div class="absolute top-1.5 left-2 bg-accent text-white font-mono text-[9px] font-semibold px-1.5 py-px rounded-full">@today</div>
+      <div class="text-[10px] text-fg2">Wed 21 May</div>
+      <div class="text-base font-bold text-fg1 leading-none -tracking-[0.025em] mt-0.5">3 events</div>
+    </div>
+  </div>
+
+  <!-- mini dock with @-mentions -->
+  <div class="min-h-[200px] border border-white/[0.08] rounded-md flex flex-col overflow-hidden"
+       style="background:var(--vibrancy-dock);backdrop-filter:blur(20px)">
+    <div class="px-3 py-2 border-b border-white/[0.06] flex gap-2 items-center text-xs text-fg1 font-semibold">
+      Chat <span class="text-accent font-medium text-[10px]">· addressing 1</span>
+    </div>
+    <div class="flex-1 px-3 py-2.5 flex flex-col gap-2">
+      <div class="max-w-[90%] px-2.5 py-1.5 rounded-[12px] text-[11px] leading-snug bg-accent text-white self-end rounded-br-[3px]">
+        summarize <span class="inline-flex items-center px-1.5 rounded-full bg-accent-tint text-accent font-mono text-[0.9em] font-semibold border border-accent/20 mx-px">@market</span> in one sentence
+      </div>
+      <div class="max-w-[90%] px-2.5 py-1.5 rounded-[12px] text-[11px] leading-snug self-start rounded-bl-[3px] text-fg1" style="background:rgba(255,255,255,0.08)">
+        Tech is up on the day — <span class="inline-flex items-center px-1.5 rounded-full bg-accent-tint text-accent font-mono text-[0.9em] font-semibold border border-accent/20 mx-px">@market</span> tickers gained an average 0.8%, led by AAPL.
+      </div>
+    </div>
+    <div class="px-2.5 py-1 border-t border-accent/[0.16] flex items-center gap-1.5" style="background:rgba(10,132,255,0.08)">
+      <span class="text-[9px] text-fg2 uppercase tracking-[0.06em] font-semibold">Addressing</span>
+      <span class="inline-flex items-center px-1.5 rounded-full bg-accent-tint text-accent font-mono text-[10px] font-semibold border border-accent/20">@market</span>
+    </div>
+    <div class="px-2 py-1.5 border-t border-white/[0.06]">
+      <input placeholder="Ask the model to change them…" class="w-full bg-white/[0.06] border-none outline-none text-fg3 text-[11px] py-1.5 px-2.5 rounded-full box-border" />
+    </div>
+  </div>
+</body></html>

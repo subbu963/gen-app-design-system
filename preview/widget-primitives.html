@@ -1,0 +1,626 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="../tailwind.js"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  /* shared widget shell pattern */
+  .panel { background: var(--bg-card); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .panel-label { font-size: 10px; color: var(--fg3); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+  .row-wrap { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  /* button base */
+  .b { font: inherit; font-weight: 600; letter-spacing: -0.01em; line-height: 1; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: background 160ms, opacity 160ms, transform 100ms; border-radius: 999px; }
+  .b:active { transform: scale(0.98); }
+  .b.lg { padding: 12px 20px; font-size: 16px; }
+  .b.md { padding: 9px 16px; font-size: 14px; }
+  .b.sm { padding: 6px 12px; font-size: 13px; }
+  .b.primary { background: var(--color-accent); color: white; }
+  .b.primary:hover { background: var(--color-accent-press); }
+  .b.secondary { background: var(--bg-card-elevated); color: var(--fg1); }
+  .b.ghost { background: transparent; color: var(--color-accent); }
+  .b.ghost:hover { background: var(--bg-hover); }
+  .b.destructive { background: var(--tint-red); color: var(--color-red); }
+  .b.outline { background: transparent; color: var(--fg1); border: 1px solid var(--stroke-hairline); }
+  .b.disabled { opacity: 0.4; cursor: not-allowed; }
+  .b.icon { width: 36px; height: 36px; padding: 0; border-radius: 50%; background: var(--bg-card-elevated); color: var(--fg1); }
+  .b.icon.sm { width: 28px; height: 28px; }
+  .b.icon.lg { width: 44px; height: 44px; }
+  .b.loading::before { content: ""; width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* form controls */
+  .field-in { background: var(--bg-input); border: 1px solid var(--stroke-soft); border-radius: 8px; padding: 9px 12px; font: inherit; font-size: 14px; color: var(--fg1); outline: none; transition: border-color 160ms, box-shadow 160ms; width: 100%; box-sizing: border-box; }
+  .field-in:focus { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-glow); }
+  .field-in::placeholder { color: var(--fg3); }
+  .field-in.error { border-color: var(--color-red); }
+  /* toggle */
+  .tog { width: 38px; height: 22px; border-radius: 11px; background: var(--fg4); position: relative; cursor: pointer; transition: 200ms; flex-shrink: 0; }
+  .tog::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: 200ms; }
+  .tog.on { background: var(--color-green); }
+  .tog.on::after { left: 18px; }
+  /* radio + checkbox */
+  .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--fg3); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .radio.on { border-color: var(--color-accent); }
+  .radio.on::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--color-accent); }
+  .check { width: 20px; height: 20px; border-radius: 6px; border: 2px solid var(--fg3); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .check.on { background: var(--color-accent); border-color: var(--color-accent); }
+  .check.on::after { content: '✓'; color: white; font-size: 12px; font-weight: 800; }
+  /* slider */
+  .slider { width: 200px; height: 4px; border-radius: 2px; background: var(--bg-card-elevated); position: relative; }
+  .slider .fill { position: absolute; top: 0; left: 0; height: 100%; background: var(--color-accent); border-radius: 2px; }
+  .slider .knob { position: absolute; top: 50%; width: 18px; height: 18px; border-radius: 50%; background: white; box-shadow: 0 2px 6px rgba(0,0,0,0.4); transform: translate(-50%, -50%); }
+  /* select */
+  .select { background: var(--bg-input); border: 1px solid var(--stroke-soft); border-radius: 8px; padding: 9px 30px 9px 12px; font: inherit; font-size: 14px; color: var(--fg1); cursor: pointer; appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--fg2) 50%), linear-gradient(135deg, var(--fg2) 50%, transparent 50%); background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
+  /* progress */
+  .progress { height: 6px; background: var(--bg-card-elevated); border-radius: 3px; overflow: hidden; }
+  .progress .bar { height: 100%; background: var(--color-accent); border-radius: 3px; transition: width 400ms; }
+  .progress.indet .bar { width: 30%; animation: indet 1.6s ease-in-out infinite; }
+  @keyframes indet { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }
+  .ring { width: 28px; height: 28px; }
+  .ring circle { fill: none; stroke-width: 3; }
+  .ring .track { stroke: var(--bg-card-elevated); }
+  .ring .fill  { stroke: var(--color-accent); stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; }
+  /* badge / pill */
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .badge.count { background: var(--color-accent); color: white; min-width: 18px; padding: 1px 5px; justify-content: center; }
+  .badge.dot { background: var(--color-red); color: white; width: 8px; height: 8px; padding: 0; }
+  /* avatar */
+  .avatar { width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 13px; flex-shrink: 0; overflow: hidden; }
+  .avatar.lg { width: 48px; height: 48px; font-size: 17px; }
+  .avatar.sm { width: 24px; height: 24px; font-size: 10px; }
+  .avatar.square { border-radius: 8px; }
+  /* image placeholder */
+  .img-slot { width: 100%; aspect-ratio: 16/9; background: var(--bg-card-elevated); border-radius: 10px; border: 1px dashed var(--stroke-hairline); display: flex; align-items: center; justify-content: center; color: var(--fg3); position: relative; overflow: hidden; }
+  .img-slot::after { content: 'image'; font-size: 11px; font-family: var(--font-mono); }
+  /* list row */
+  .list { background: var(--bg-card-elevated); border-radius: 10px; overflow: hidden; }
+  .list-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--stroke-hairline); }
+  .list-row:last-child { border-bottom: none; }
+  /* skeleton */
+  .skel { background: linear-gradient(90deg, var(--bg-card-elevated), rgba(255,255,255,0.06), var(--bg-card-elevated)); background-size: 200% 100%; animation: shimmer 1.6s linear infinite; border-radius: 6px; }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  /* tabs */
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--stroke-hairline); }
+  .tab { padding: 8px 14px; font-size: 13px; font-weight: 500; color: var(--fg2); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab.on { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+</style>
+</head>
+<body class="m-0 p-5 bg-window font-sans flex flex-col gap-4">
+
+<!-- ─────────────── TYPE ─────────────── -->
+<div class="panel">
+  <div class="panel-label">Headings &amp; body — render the model's text output</div>
+  <div class="text-3xl font-bold text-fg1 -tracking-[0.022em]">Large title · 34</div>
+  <div class="text-2xl font-bold text-fg1 -tracking-[0.022em]">Title 1 · 28</div>
+  <div class="text-xl font-semibold text-fg1 -tracking-[0.012em]">Title 2 · 22</div>
+  <div class="text-lg font-semibold text-fg1 -tracking-[0.012em]">Title 3 · 20</div>
+  <div class="text-md text-fg1">Body — Adds a weather widget for Brooklyn, NY.</div>
+  <div class="text-base text-fg2">Subheadline — Always reachable from the dock.</div>
+  <div class="text-sm text-fg2">Footnote — Key stored in macOS keychain.</div>
+  <div class="text-xs text-fg2">Caption — 3 min ago · live</div>
+  <div class="text-2xs text-fg3 uppercase tracking-[0.06em] font-semibold">Overline · 11</div>
+  <div class="font-serif italic text-3xl text-fg1">"Hi. Let's pick a brain."  <span class="text-fg2 text-sm not-italic font-sans">— flourish · use sparingly</span></div>
+  <div class="font-mono text-sm text-fg2">{ <span class="text-accent">type</span>: <span class="text-green">"weather"</span> }</div>
+</div>
+
+<!-- ─────────────── BUTTONS ─────────────── -->
+<div class="panel">
+  <div class="panel-label">Buttons · primary / secondary / ghost / destructive / outline · sm md lg · states</div>
+  <div class="row-wrap">
+    <button class="b primary lg">Add provider</button>
+    <button class="b primary md">Add provider</button>
+    <button class="b primary sm">Add</button>
+  </div>
+  <div class="row-wrap">
+    <button class="b primary md">Default</button>
+    <button class="b primary md" style="background:var(--color-accent-press)">Hover</button>
+    <button class="b primary md loading">Loading</button>
+    <button class="b primary md disabled">Disabled</button>
+  </div>
+  <div class="row-wrap">
+    <button class="b secondary md">Secondary</button>
+    <button class="b ghost md">Skip</button>
+    <button class="b outline md">Outline</button>
+    <button class="b destructive md">Toss widget</button>
+  </div>
+  <div class="row-wrap">
+    <button class="b primary md"><i data-lucide="plus" class="w-4 h-4"></i>With leading icon</button>
+    <button class="b secondary md">With trailing<i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+    <button class="b icon sm"><i data-lucide="settings" class="w-4 h-4"></i></button>
+    <button class="b icon md"><i data-lucide="settings" class="w-[18px] h-[18px]"></i></button>
+    <button class="b icon lg"><i data-lucide="settings" class="w-5 h-5"></i></button>
+    <button class="b icon md" style="background:var(--color-accent);color:white"><i data-lucide="arrow-up" class="w-4 h-4"></i></button>
+  </div>
+</div>
+
+<!-- ─────────────── INPUTS / TEXT FIELDS ─────────────── -->
+<div class="panel">
+  <div class="panel-label">Inputs · text / search / number / textarea / states</div>
+  <div class="grid grid-cols-2 gap-2.5">
+    <input class="field-in" placeholder="Default input" />
+    <input class="field-in" value="Filled value" />
+    <input class="field-in" placeholder="Focused…" autofocus />
+    <input class="field-in error" value="Invalid input" />
+    <input class="field-in" placeholder="Disabled" disabled style="opacity:0.5" />
+    <div class="flex items-center gap-2 bg-input border border-soft rounded-lg px-3 py-2 focus-within:border-accent">
+      <i data-lucide="search" class="w-4 h-4 text-fg2"></i>
+      <input class="bg-transparent border-none outline-none text-fg1 text-sm flex-1 font-sans" placeholder="Search widgets…" />
+    </div>
+  </div>
+  <textarea class="field-in" rows="2" placeholder="Multi-line input — declarative spec goes here…"></textarea>
+  <div class="grid grid-cols-3 gap-2.5">
+    <select class="select">
+      <option>OpenRouter</option><option>Groq</option><option>OpenAI</option><option>Ollama</option>
+    </select>
+    <input class="field-in" type="number" value="42" />
+    <input class="field-in" type="date" value="2026-05-21" />
+  </div>
+</div>
+
+<!-- ─────────────── RADIO / CHECKBOX / TOGGLE ─────────────── -->
+<div class="panel">
+  <div class="panel-label">Choice · radio · checkbox · toggle</div>
+  <div class="grid grid-cols-3 gap-4">
+    <div class="flex flex-col gap-2">
+      <div class="text-xs text-fg2 mb-1">Radio (one)</div>
+      <label class="flex items-center gap-2 text-sm text-fg1"><div class="radio on"></div>Groq</label>
+      <label class="flex items-center gap-2 text-sm text-fg1"><div class="radio"></div>OpenRouter</label>
+      <label class="flex items-center gap-2 text-sm text-fg1"><div class="radio"></div>OpenAI</label>
+    </div>
+    <div class="flex flex-col gap-2">
+      <div class="text-xs text-fg2 mb-1">Checkbox (many)</div>
+      <label class="flex items-center gap-2 text-sm text-fg1"><div class="check on"></div>Yahoo Finance</label>
+      <label class="flex items-center gap-2 text-sm text-fg1"><div class="check on"></div>Open-Meteo</label>
+      <label class="flex items-center gap-2 text-sm text-fg1"><div class="check"></div>HackerNews</label>
+    </div>
+    <div class="flex flex-col gap-2">
+      <div class="text-xs text-fg2 mb-1">Toggle</div>
+      <label class="flex items-center justify-between text-sm text-fg1"><span>Live updates</span><div class="tog on"></div></label>
+      <label class="flex items-center justify-between text-sm text-fg1"><span>Auto-refresh</span><div class="tog on"></div></label>
+      <label class="flex items-center justify-between text-sm text-fg1"><span>Compact</span><div class="tog"></div></label>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────── SEGMENTED / TABS / SLIDER ─────────────── -->
+<div class="panel">
+  <div class="panel-label">Switchers · segmented · tabs · slider</div>
+  <div class="row-wrap">
+    <div class="inline-flex p-0.5 bg-base rounded-sm">
+      <div class="px-3 py-1.5 text-xs font-medium text-fg1 rounded-[6px] bg-elevated shadow-[0_1px_2px_rgba(0,0,0,0.3)]">Line</div>
+      <div class="px-3 py-1.5 text-xs font-medium text-fg1 rounded-[6px]">Bars</div>
+      <div class="px-3 py-1.5 text-xs font-medium text-fg1 rounded-[6px]">Candles</div>
+    </div>
+    <div class="slider"><div class="fill" style="width:42%"></div><div class="knob" style="left:42%"></div></div>
+    <div class="text-xs text-fg2 font-mono">42 °F</div>
+  </div>
+  <div class="tabs">
+    <div class="tab on">Overview</div>
+    <div class="tab">Holdings</div>
+    <div class="tab">News</div>
+    <div class="tab">Earnings</div>
+  </div>
+</div>
+
+<!-- ─────────────── DROPDOWN / MENU ─────────────── -->
+<div class="panel">
+  <div class="panel-label">Dropdown · menu popover (open state)</div>
+  <div class="flex gap-4 items-start">
+    <button class="b secondary md">All providers<i data-lucide="chevron-down" class="w-4 h-4"></i></button>
+    <!-- open dropdown -->
+    <div class="bg-elevated border border-soft rounded-md p-1 min-w-[200px]" style="box-shadow:var(--elev-3)">
+      <div class="flex items-center gap-2 px-2.5 py-2 rounded-md text-sm text-fg1 cursor-pointer hover:bg-white/[0.04]"><i data-lucide="cpu" class="w-4 h-4 text-fg2"></i>Pick model</div>
+      <div class="flex items-center gap-2 px-2.5 py-2 rounded-md text-sm text-fg1 cursor-pointer bg-white/[0.06]"><i data-lucide="key" class="w-4 h-4 text-fg2"></i>Replace key</div>
+      <div class="flex items-center gap-2 px-2.5 py-2 rounded-md text-sm text-fg1 cursor-pointer hover:bg-white/[0.04]"><i data-lucide="copy" class="w-4 h-4 text-fg2"></i>Duplicate</div>
+      <div class="h-px bg-hairline my-1"></div>
+      <div class="flex items-center gap-2 px-2.5 py-2 rounded-md text-sm text-red cursor-pointer"><i data-lucide="trash-2" class="w-4 h-4 text-red"></i>Remove</div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────── PROGRESS / LOADERS ─────────────── -->
+<div class="panel">
+  <div class="panel-label">Progress · linear · indeterminate · ring · skeleton</div>
+  <div class="flex flex-col gap-2.5">
+    <div class="flex items-center gap-3"><div class="progress w-[280px]"><div class="bar" style="width:64%"></div></div><span class="text-xs text-fg2 font-mono">64%</span></div>
+    <div class="flex items-center gap-3"><div class="progress indet w-[280px]"><div class="bar"></div></div><span class="text-xs text-fg2 font-mono">indeterminate</span></div>
+    <div class="flex items-center gap-3">
+      <svg viewBox="0 0 28 28" class="ring"><circle class="track" cx="14" cy="14" r="11"/><circle class="fill" cx="14" cy="14" r="11" stroke-dasharray="69" stroke-dashoffset="22"/></svg>
+      <span class="text-xs text-fg2 font-mono">68% · ring</span>
+      <svg viewBox="0 0 28 28" class="ring"><circle class="track" cx="14" cy="14" r="11"/><circle class="fill" cx="14" cy="14" r="11" stroke-dasharray="20 49" style="animation:spin 1s linear infinite;transform:rotate(0);transform-origin:50% 50%"/></svg>
+      <span class="text-xs text-fg2 font-mono">indeterminate · spinner</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="skel h-4 w-[60%]"></div>
+      <div class="skel h-4 w-12"></div>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="skel rounded-full w-9 h-9"></div>
+      <div class="flex flex-col gap-1.5 flex-1">
+        <div class="skel h-3.5 w-[60%]"></div>
+        <div class="skel h-3 w-[40%]"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────── BADGES / PILLS / STATUS ─────────────── -->
+<div class="panel">
+  <div class="panel-label">Badges · counts · status pills · dot notification</div>
+  <div class="row-wrap">
+    <span class="badge bg-tint-green text-green"><span class="w-1.5 h-1.5 rounded-full bg-green"></span>Live</span>
+    <span class="badge bg-tint-orange text-orange"><span class="w-1.5 h-1.5 rounded-full bg-orange"></span>Stale</span>
+    <span class="badge bg-tint-red text-red"><span class="w-1.5 h-1.5 rounded-full bg-red"></span>Errored</span>
+    <span class="badge bg-tint-yellow text-yellow"><span class="w-1.5 h-1.5 rounded-full bg-yellow"></span>Pending</span>
+    <span class="badge bg-tint-purple text-purple"><span class="w-1.5 h-1.5 rounded-full bg-purple"></span>Local</span>
+    <span class="badge bg-accent-tint text-accent">Beta</span>
+    <span class="badge bg-card-elevated text-fg2 border border-soft">Free</span>
+  </div>
+  <div class="row-wrap items-end">
+    <div class="relative inline-block">
+      <button class="b icon md"><i data-lucide="bell" class="w-[18px] h-[18px]"></i></button>
+      <span class="badge count absolute -top-1 -right-1">3</span>
+    </div>
+    <div class="relative inline-block">
+      <button class="b icon md"><i data-lucide="message-circle" class="w-[18px] h-[18px]"></i></button>
+      <span class="badge count absolute -top-1 -right-1">12</span>
+    </div>
+    <div class="relative inline-block">
+      <button class="b icon md"><i data-lucide="inbox" class="w-[18px] h-[18px]"></i></button>
+      <span class="badge count absolute -top-1 -right-1">99+</span>
+    </div>
+    <div class="relative inline-block">
+      <button class="b icon md"><i data-lucide="globe" class="w-[18px] h-[18px]"></i></button>
+      <span class="badge dot absolute top-1 right-1"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────── AVATARS / IMAGES ─────────────── -->
+<div class="panel">
+  <div class="panel-label">Avatars · image holders</div>
+  <div class="row-wrap">
+    <div class="avatar lg" style="background:#FF9F0A">G</div>
+    <div class="avatar lg" style="background:#5E5CE6">OR</div>
+    <div class="avatar lg" style="background:#10A37F">AI</div>
+    <div class="avatar lg" style="background:#30D158">●</div>
+    <div class="avatar lg square" style="background:linear-gradient(135deg,#0A84FF,#5E5CE6)">✦</div>
+    <div class="avatar lg square" style="background:linear-gradient(135deg,#FF9F0A,#FF3B30)">$</div>
+    <div class="flex -space-x-2">
+      <div class="avatar md" style="background:#FF9F0A;border:2px solid var(--bg-card)">G</div>
+      <div class="avatar md" style="background:#5E5CE6;border:2px solid var(--bg-card)">OR</div>
+      <div class="avatar md" style="background:#10A37F;border:2px solid var(--bg-card)">AI</div>
+      <div class="avatar md" style="background:var(--bg-card-elevated);color:var(--fg2);border:2px solid var(--bg-card)">+5</div>
+    </div>
+  </div>
+  <div class="grid grid-cols-3 gap-2.5">
+    <div class="img-slot"></div>
+    <div class="img-slot" style="background:linear-gradient(135deg,rgba(10,132,255,0.3),rgba(94,92,230,0.3));border-style:solid;border-color:transparent">
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--fg2);position:absolute;bottom:6px;left:8px">filled</div>
+    </div>
+    <div class="img-slot" style="background:url('https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?w=400&q=80') center/cover;border-style:solid;border-color:transparent;color:transparent"></div>
+  </div>
+</div>
+
+<!-- ─────────────── LIST ROWS ─────────────── -->
+<div class="panel">
+  <div class="panel-label">List rows · with leading icon · with avatar · with trailing affordances</div>
+  <div class="list">
+    <div class="list-row">
+      <div class="w-7 h-7 rounded-[7px] inline-flex items-center justify-center text-white text-sm font-bold shrink-0" style="background:#FF9F0A">G</div>
+      <div class="flex-1 min-w-0"><div class="text-sm text-fg1">Groq</div><div class="text-xs text-fg2">llama-3.3-70b · 0.4s avg</div></div>
+      <span class="badge bg-tint-green text-green">active</span>
+    </div>
+    <div class="list-row">
+      <i data-lucide="puzzle" class="w-5 h-5 text-fg2"></i>
+      <div class="flex-1 min-w-0"><div class="text-sm text-fg1">Yahoo Finance</div><div class="text-xs text-fg2">Stock data · 15-min delayed</div></div>
+      <span class="text-xs text-fg3 font-mono">v0.4.1</span>
+      <div class="tog on"></div>
+    </div>
+    <div class="list-row">
+      <div class="avatar sm" style="background:#5E5CE6">AS</div>
+      <div class="flex-1 min-w-0"><div class="text-sm text-fg1">Anna Schmidt</div><div class="text-xs text-fg2">anna@gen-app.dev</div></div>
+      <i data-lucide="chevron-right" class="w-4 h-4 text-fg3"></i>
+    </div>
+    <div class="list-row">
+      <div class="check on"></div>
+      <div class="flex-1 text-sm text-fg1">Ship widget primitives</div>
+      <span class="text-xs text-fg3">today</span>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────── CARDS ─────────────── -->
+<div class="panel">
+  <div class="panel-label">Cards · stat tile · content · image · clickable</div>
+  <div class="grid grid-cols-3 gap-2.5">
+    <!-- Stat tile -->
+    <div class="bg-card-elevated rounded-lg p-3.5 flex flex-col gap-1">
+      <div class="text-xs text-fg2">Revenue · 30d</div>
+      <div class="text-2xl font-bold text-fg1 -tracking-[0.025em] leading-none">$12,402</div>
+      <div class="text-xs font-semibold text-green">▲ +8.4% vs prev</div>
+    </div>
+    <!-- Stat tile down -->
+    <div class="bg-card-elevated rounded-lg p-3.5 flex flex-col gap-1">
+      <div class="text-xs text-fg2">Active users</div>
+      <div class="text-2xl font-bold text-fg1 -tracking-[0.025em] leading-none">1,284</div>
+      <div class="text-xs font-semibold text-red">▼ -3.2% vs prev</div>
+    </div>
+    <!-- Stat tile with mini chart -->
+    <div class="bg-card-elevated rounded-lg p-3.5 flex flex-col gap-1">
+      <div class="text-xs text-fg2">Tokens this week</div>
+      <div class="text-2xl font-bold text-fg1 -tracking-[0.025em] leading-none">2.1M</div>
+      <svg viewBox="0 0 100 24" preserveAspectRatio="none" class="w-full h-5 mt-auto">
+        <polyline fill="none" stroke="#0A84FF" stroke-width="1.4" points="0,18 14,16 26,18 38,12 50,14 62,8 74,10 86,4 100,2"/>
+      </svg>
+    </div>
+  </div>
+  <div class="grid grid-cols-2 gap-2.5">
+    <!-- Content card -->
+    <div class="bg-card-elevated rounded-lg p-3.5 flex flex-col gap-2">
+      <div class="flex items-center gap-2">
+        <div class="avatar sm" style="background:#0A84FF">G</div>
+        <div class="text-sm font-semibold text-fg1">gen-app v0.1</div>
+        <span class="badge bg-accent-tint text-accent ml-auto">Beta</span>
+      </div>
+      <div class="text-sm text-fg2 leading-snug">Build live, self-updating widgets from a chat with the model. Pin them, tag them, ask them to change.</div>
+      <button class="b primary sm mt-1 self-start">Open canvas</button>
+    </div>
+    <!-- Image card -->
+    <div class="bg-card-elevated rounded-lg overflow-hidden flex flex-col">
+      <div class="aspect-[3/2]" style="background:linear-gradient(135deg,rgba(10,132,255,0.7),rgba(94,92,230,0.7))"></div>
+      <div class="p-3 flex flex-col gap-1">
+        <div class="text-sm font-semibold text-fg1">Brooklyn forecast</div>
+        <div class="text-xs text-fg2">Open-Meteo · 7-day outlook</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────── EMPTY / ERROR / SUCCESS ─────────────── -->
+<div class="panel">
+  <div class="panel-label">Feedback states · empty · error · success · info banner</div>
+  <div class="grid grid-cols-2 gap-2.5">
+    <div class="bg-card-elevated rounded-lg p-4 flex flex-col items-center gap-2 text-center">
+      <div class="w-10 h-10 rounded-lg flex items-center justify-center text-white" style="background:linear-gradient(135deg,#0A84FF,#5E5CE6)"><i data-lucide="sparkles" class="w-5 h-5"></i></div>
+      <div class="font-serif italic text-lg text-fg1 leading-none">Nothing here yet.</div>
+      <div class="text-xs text-fg2">Ask for a widget in the dock below.</div>
+    </div>
+    <div class="bg-card-elevated rounded-lg p-4 flex flex-col items-center gap-2 text-center">
+      <div class="w-10 h-10 rounded-lg flex items-center justify-center text-red bg-tint-red"><i data-lucide="alert-triangle" class="w-5 h-5"></i></div>
+      <div class="text-sm font-semibold text-fg1">Groq blinked.</div>
+      <div class="text-xs text-fg2">Connection dropped after 3 tries.</div>
+      <button class="b destructive sm mt-1"><i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>Retry</button>
+    </div>
+  </div>
+  <div class="flex items-center gap-2.5 px-3 py-2 rounded-md bg-tint-green text-green border border-green/20">
+    <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+    <div class="text-sm text-fg1 flex-1">Provider saved.</div>
+    <button class="b ghost sm" style="padding:4px 8px;color:var(--color-green)">Dismiss</button>
+  </div>
+  <div class="flex items-center gap-2.5 px-3 py-2 rounded-md bg-accent-tint text-accent border border-accent/20">
+    <i data-lucide="info" class="w-4 h-4"></i>
+    <div class="text-sm text-fg1 flex-1">Switched to Groq. Conversation kept.</div>
+    <button class="b ghost sm" style="padding:4px 8px">Undo</button>
+  </div>
+</div>
+
+<!-- ─────────────── CHARTS ─────────────── -->
+<div class="panel">
+  <div class="panel-label">Charts · sparkline · line · bars · candles · area · pie · ring · bar chart</div>
+
+  <!-- Tiny inline sparklines + bar bars (SVG, no library) -->
+  <div class="grid grid-cols-4 gap-2.5">
+    <div class="bg-card-elevated rounded-lg p-3 flex flex-col gap-1">
+      <div class="text-[10px] text-fg2 uppercase tracking-[0.06em] font-semibold">Sparkline · up</div>
+      <div class="text-base font-bold text-fg1 -tracking-[0.02em] leading-none">$224.18</div>
+      <svg viewBox="0 0 100 28" preserveAspectRatio="none" class="w-full h-6">
+        <polyline fill="rgba(48,209,88,0.15)" stroke="none" points="0,22 14,18 26,20 38,14 50,16 62,8 74,10 86,4 100,2 100,28 0,28"/>
+        <polyline fill="none" stroke="var(--color-green)" stroke-width="1.5" points="0,22 14,18 26,20 38,14 50,16 62,8 74,10 86,4 100,2"/>
+      </svg>
+    </div>
+    <div class="bg-card-elevated rounded-lg p-3 flex flex-col gap-1">
+      <div class="text-[10px] text-fg2 uppercase tracking-[0.06em] font-semibold">Sparkline · down</div>
+      <div class="text-base font-bold text-fg1 -tracking-[0.02em] leading-none">$142.30</div>
+      <svg viewBox="0 0 100 28" preserveAspectRatio="none" class="w-full h-6">
+        <polyline fill="rgba(255,69,58,0.15)" stroke="none" points="0,4 14,8 26,6 38,14 50,12 62,18 74,16 86,22 100,26 100,28 0,28"/>
+        <polyline fill="none" stroke="var(--color-red)" stroke-width="1.5" points="0,4 14,8 26,6 38,14 50,12 62,18 74,16 86,22 100,26"/>
+      </svg>
+    </div>
+    <div class="bg-card-elevated rounded-lg p-3 flex flex-col gap-1">
+      <div class="text-[10px] text-fg2 uppercase tracking-[0.06em] font-semibold">Mini bars</div>
+      <div class="text-base font-bold text-fg1 -tracking-[0.02em] leading-none">1.2k / day</div>
+      <div class="flex items-end gap-px h-6">
+        <div class="flex-1 bg-accent rounded-sm" style="height:30%"></div>
+        <div class="flex-1 bg-accent rounded-sm" style="height:55%"></div>
+        <div class="flex-1 bg-accent rounded-sm" style="height:42%"></div>
+        <div class="flex-1 bg-accent rounded-sm" style="height:80%"></div>
+        <div class="flex-1 bg-accent rounded-sm" style="height:65%"></div>
+        <div class="flex-1 bg-accent rounded-sm" style="height:95%"></div>
+        <div class="flex-1 bg-accent rounded-sm" style="height:70%"></div>
+      </div>
+    </div>
+    <div class="bg-card-elevated rounded-lg p-3 flex flex-col items-center gap-1">
+      <div class="text-[10px] text-fg2 uppercase tracking-[0.06em] font-semibold self-stretch">Ring · pct</div>
+      <svg viewBox="0 0 48 48" class="w-12 h-12">
+        <circle cx="24" cy="24" r="20" fill="none" stroke="var(--bg-card)" stroke-width="6"/>
+        <circle cx="24" cy="24" r="20" fill="none" stroke="var(--color-accent)" stroke-width="6" stroke-linecap="round"
+                stroke-dasharray="125.6" stroke-dashoffset="42"
+                style="transform:rotate(-90deg);transform-origin:50% 50%"/>
+        <text x="24" y="28" text-anchor="middle" fill="var(--fg1)" font-size="11" font-weight="700" font-family="var(--font-sans)">67%</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Full TradingView lightweight-charts (line / bars / candles toggle) -->
+  <div class="bg-card-elevated rounded-lg p-3.5 flex flex-col gap-2.5">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="text-xs text-fg2 font-medium">AAPL · Apple Inc.</div>
+        <div class="flex items-baseline gap-2 mt-0.5">
+          <div class="text-xl font-bold text-fg1 -tracking-[0.025em] leading-none" id="wp-px">$0.00</div>
+          <div class="text-xs font-semibold" id="wp-delta">▲</div>
+        </div>
+      </div>
+      <div class="inline-flex p-0.5 bg-base rounded-sm gap-0 select-none" role="radiogroup">
+        <button class="wp-seg px-2 py-1 text-[10px] font-medium text-fg1 rounded-[6px] cursor-pointer bg-card shadow-[0_1px_2px_rgba(0,0,0,0.3)]" data-mode="line">Line</button>
+        <button class="wp-seg px-2 py-1 text-[10px] font-medium text-fg1 rounded-[6px] cursor-pointer" data-mode="bar">Bars</button>
+        <button class="wp-seg px-2 py-1 text-[10px] font-medium text-fg1 rounded-[6px] cursor-pointer" data-mode="candle">Candles</button>
+      </div>
+    </div>
+    <div id="wp-chart" class="w-full h-[180px] rounded-md overflow-hidden"></div>
+  </div>
+
+  <!-- Bar chart with axis (horizontal) -->
+  <div class="bg-card-elevated rounded-lg p-3.5 flex flex-col gap-2">
+    <div class="text-[10px] text-fg2 uppercase tracking-[0.06em] font-semibold">Horizontal bars · category breakdown</div>
+    <div class="flex flex-col gap-2 mt-1">
+      <div class="flex items-center gap-2.5"><div class="text-xs text-fg2 w-16 shrink-0">Equities</div><div class="flex-1 bg-card rounded-full h-2 overflow-hidden"><div class="h-full bg-accent rounded-full" style="width:62%"></div></div><div class="text-xs font-mono text-fg1 w-10 text-right">62%</div></div>
+      <div class="flex items-center gap-2.5"><div class="text-xs text-fg2 w-16 shrink-0">Bonds</div><div class="flex-1 bg-card rounded-full h-2 overflow-hidden"><div class="h-full rounded-full" style="width:24%;background:var(--color-purple)"></div></div><div class="text-xs font-mono text-fg1 w-10 text-right">24%</div></div>
+      <div class="flex items-center gap-2.5"><div class="text-xs text-fg2 w-16 shrink-0">Cash</div><div class="flex-1 bg-card rounded-full h-2 overflow-hidden"><div class="h-full rounded-full" style="width:9%;background:var(--color-green)"></div></div><div class="text-xs font-mono text-fg1 w-10 text-right">9%</div></div>
+      <div class="flex items-center gap-2.5"><div class="text-xs text-fg2 w-16 shrink-0">Crypto</div><div class="flex-1 bg-card rounded-full h-2 overflow-hidden"><div class="h-full rounded-full" style="width:5%;background:var(--color-orange)"></div></div><div class="text-xs font-mono text-fg1 w-10 text-right">5%</div></div>
+    </div>
+  </div>
+
+  <!-- Pie / donut + legend -->
+  <div class="bg-card-elevated rounded-lg p-3.5 flex items-center gap-4">
+    <svg viewBox="0 0 64 64" class="w-20 h-20 shrink-0">
+      <circle cx="32" cy="32" r="24" fill="none" stroke="var(--color-accent)" stroke-width="14"
+              stroke-dasharray="93.5 150.8" stroke-dashoffset="0"
+              style="transform:rotate(-90deg);transform-origin:50% 50%"/>
+      <circle cx="32" cy="32" r="24" fill="none" stroke="var(--color-purple)" stroke-width="14"
+              stroke-dasharray="36.2 150.8" stroke-dashoffset="-93.5"
+              style="transform:rotate(-90deg);transform-origin:50% 50%"/>
+      <circle cx="32" cy="32" r="24" fill="none" stroke="var(--color-green)" stroke-width="14"
+              stroke-dasharray="13.6 150.8" stroke-dashoffset="-129.7"
+              style="transform:rotate(-90deg);transform-origin:50% 50%"/>
+      <circle cx="32" cy="32" r="24" fill="none" stroke="var(--color-orange)" stroke-width="14"
+              stroke-dasharray="7.5 150.8" stroke-dashoffset="-143.3"
+              style="transform:rotate(-90deg);transform-origin:50% 50%"/>
+    </svg>
+    <div class="flex-1 grid grid-cols-2 gap-1.5">
+      <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm bg-accent"></span><span class="text-xs text-fg1 flex-1">Equities</span><span class="text-xs font-mono text-fg2">62%</span></div>
+      <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm bg-purple"></span><span class="text-xs text-fg1 flex-1">Bonds</span><span class="text-xs font-mono text-fg2">24%</span></div>
+      <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm bg-green"></span><span class="text-xs text-fg1 flex-1">Cash</span><span class="text-xs font-mono text-fg2">9%</span></div>
+      <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm bg-orange"></span><span class="text-xs text-fg1 flex-1">Crypto</span><span class="text-xs font-mono text-fg2">5%</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────── KEY-VALUE / DEFINITION LIST ─────────────── -->
+<div class="panel">
+  <div class="panel-label">Key/value · stat row · for any structured render</div>
+  <div class="bg-card-elevated rounded-lg overflow-hidden">
+    <div class="flex items-center justify-between px-3.5 py-2.5 border-b border-hairline">
+      <span class="text-xs text-fg2 uppercase tracking-[0.06em] font-semibold">Market cap</span>
+      <span class="text-sm font-mono text-fg1">$3.42T</span>
+    </div>
+    <div class="flex items-center justify-between px-3.5 py-2.5 border-b border-hairline">
+      <span class="text-xs text-fg2 uppercase tracking-[0.06em] font-semibold">P/E ratio</span>
+      <span class="text-sm font-mono text-fg1">28.4</span>
+    </div>
+    <div class="flex items-center justify-between px-3.5 py-2.5 border-b border-hairline">
+      <span class="text-xs text-fg2 uppercase tracking-[0.06em] font-semibold">52w range</span>
+      <span class="text-sm font-mono text-fg1">$164.08 – $237.49</span>
+    </div>
+    <div class="flex items-center justify-between px-3.5 py-2.5">
+      <span class="text-xs text-fg2 uppercase tracking-[0.06em] font-semibold">Dividend</span>
+      <span class="text-sm font-mono text-fg1">0.51%</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+
+  // ── TradingView lightweight-charts (line / bars / candles) ──────────
+  (function() {
+    const container = document.getElementById('wp-chart');
+    if (!container || typeof LightweightCharts === 'undefined') return;
+
+    // 60 sessions of fake OHLC data
+    const N = 60;
+    let close = 198;
+    const rows = [];
+    const today = new Date();
+    for (let i = N - 1; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const drift = (Math.random() - 0.45) * 3.2;
+      const open = close;
+      close = Math.max(60, open + drift);
+      const high = Math.max(open, close) + Math.random() * 1.6;
+      const low  = Math.min(open, close) - Math.random() * 1.6;
+      rows.push({ time: date.toISOString().slice(0, 10), open: +open.toFixed(2), high: +high.toFixed(2), low: +low.toFixed(2), close: +close.toFixed(2) });
+    }
+
+    const cs = getComputedStyle(document.documentElement);
+    const COL = {
+      fg2:    cs.getPropertyValue('--fg2').trim()           || '#888',
+      fg3:    cs.getPropertyValue('--fg3').trim()           || '#666',
+      grid:   cs.getPropertyValue('--stroke-hairline').trim() || 'rgba(84,84,88,0.5)',
+      accent: cs.getPropertyValue('--color-accent').trim()   || '#0A84FF',
+      green:  cs.getPropertyValue('--color-green').trim()    || '#30D158',
+      red:    cs.getPropertyValue('--color-red').trim()      || '#FF453A',
+      card:   cs.getPropertyValue('--bg-card-elevated').trim() || '#3A3A3C',
+    };
+
+    const chart = LightweightCharts.createChart(container, {
+      width: container.clientWidth,
+      height: container.clientHeight,
+      layout: {
+        background: { type: 'solid', color: COL.card },
+        textColor: COL.fg2,
+        fontFamily: '-apple-system, "SF Pro Display", sans-serif',
+        fontSize: 10,
+      },
+      grid: { vertLines: { color: 'transparent' }, horzLines: { color: COL.grid } },
+      rightPriceScale: { borderColor: 'transparent', scaleMargins: { top: 0.1, bottom: 0.1 } },
+      timeScale: { borderColor: 'transparent', timeVisible: false },
+      crosshair: { mode: 1, vertLine: { color: COL.fg3, width: 1, style: 2 }, horzLine: { color: COL.fg3, width: 1, style: 2 } },
+      handleScale: { mouseWheel: false, pinch: false },
+    });
+
+    const lineSeries = chart.addLineSeries({ color: COL.accent, lineWidth: 2, lastValueVisible: false, priceLineVisible: false });
+    const areaSeries = chart.addAreaSeries({ topColor: 'rgba(10,132,255,0.22)', bottomColor: 'rgba(10,132,255,0)', lineColor: 'rgba(10,132,255,0)', lastValueVisible: false, priceLineVisible: false });
+    const lineData = rows.map(r => ({ time: r.time, value: r.close }));
+    lineSeries.setData(lineData);
+    areaSeries.setData(lineData);
+    const barSeries = chart.addBarSeries({ upColor: COL.green, downColor: COL.red, lastValueVisible: false, priceLineVisible: false });
+    barSeries.setData(rows);
+    const candleSeries = chart.addCandlestickSeries({ upColor: COL.green, downColor: COL.red, borderUpColor: COL.green, borderDownColor: COL.red, wickUpColor: COL.green, wickDownColor: COL.red, lastValueVisible: false, priceLineVisible: false });
+    candleSeries.setData(rows);
+
+    function setMode(mode) {
+      lineSeries.applyOptions({ visible: mode === 'line' });
+      areaSeries.applyOptions({ visible: mode === 'line' });
+      barSeries.applyOptions({ visible: mode === 'bar' });
+      candleSeries.applyOptions({ visible: mode === 'candle' });
+    }
+    setMode('line');
+
+    document.querySelectorAll('.wp-seg').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.wp-seg').forEach(b => b.classList.remove('bg-card', 'shadow-[0_1px_2px_rgba(0,0,0,0.3)]'));
+        btn.classList.add('bg-card', 'shadow-[0_1px_2px_rgba(0,0,0,0.3)]');
+        setMode(btn.dataset.mode);
+      });
+    });
+
+    const last = rows[rows.length - 1];
+    const first = rows[0];
+    const change = last.close - first.close;
+    const pct = (change / first.close) * 100;
+    const up = change >= 0;
+    document.getElementById('wp-px').textContent = '$' + last.close.toFixed(2);
+    const dEl = document.getElementById('wp-delta');
+    dEl.textContent = (up ? '▲ +' : '▼ ') + Math.abs(change).toFixed(2) + ' (' + (up ? '+' : '') + pct.toFixed(2) + '%)';
+    dEl.style.color = up ? COL.green : COL.red;
+
+    chart.timeScale().fitContent();
+    const fit = () => { const r = container.getBoundingClientRect(); if (r.width > 0 && r.height > 0) chart.resize(r.width, r.height); };
+    requestAnimationFrame(fit);
+    new ResizeObserver(fit).observe(container);
+  })();
+</script>
+</body></html>

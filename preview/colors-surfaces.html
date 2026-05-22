@@ -1,0 +1,70 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="../tailwind.js"></script>
+</head>
+<body class="m-0 p-[18px] bg-base font-sans">
+  <div class="flex gap-[14px] items-stretch">
+    <!-- diorama: nested surfaces in real use -->
+    <div class="flex-[1.6] bg-base rounded-md p-3 min-h-[168px] relative border border-white/[0.06]">
+      <div class="h-full bg-window rounded-[10px] p-[10px] flex gap-2">
+        <!-- stock card -->
+        <div class="flex-1 bg-card rounded-[10px] p-[10px] flex flex-col gap-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+          <div class="text-[9px] text-fg2 font-medium">AAPL · Apple Inc.</div>
+          <div class="text-[22px] font-bold text-fg1 -tracking-[0.025em] leading-none">$224.18</div>
+          <div class="text-[11px] font-semibold text-green">▲ +2.34 (1.05%)</div>
+          <svg viewBox="0 0 100 24" preserveAspectRatio="none" class="w-full h-5 mt-auto">
+            <polyline fill="none" stroke="#30D158" stroke-width="1.4" points="0,18 12,16 22,18 34,12 48,14 60,8 72,10 84,4 100,2"/>
+            <polyline fill="rgba(48,209,88,0.15)" stroke="none" points="0,18 12,16 22,18 34,12 48,14 60,8 72,10 84,4 100,2 100,24 0,24"/>
+          </svg>
+        </div>
+        <!-- weather card -->
+        <div class="flex-1 bg-card rounded-[10px] p-[10px] flex flex-col gap-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+          <div class="text-[9px] text-fg2 font-medium">Brooklyn, NY</div>
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-full shadow-[0_0_16px_rgba(255,159,10,0.5)]"
+                 style="background:radial-gradient(circle,#FFD60A,#FF9F0A);"></div>
+            <div class="text-[22px] font-bold text-fg1 -tracking-[0.025em] leading-none">68°</div>
+          </div>
+          <div class="text-[10px] text-fg2">Mostly sunny</div>
+        </div>
+      </div>
+      <!-- popover -->
+      <div class="absolute right-[22px] bottom-4 bg-elevated border border-white/[0.08] rounded-lg px-[10px] py-1.5 text-[10px] text-fg1 font-medium shadow-[0_6px_16px_-4px_rgba(0,0,0,0.5)] flex items-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-accent"></span> Sort by symbol
+      </div>
+    </div>
+
+    <!-- legend -->
+    <div class="w-[220px] flex flex-col gap-2">
+      <div class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg bg-window">
+        <div class="w-[26px] h-[26px] rounded-md bg-base shrink-0 border border-white/[0.04]"></div>
+        <div>
+          <div class="text-[11px] font-semibold text-fg1">base</div>
+          <div class="text-[10px] text-fg2 font-mono">#000000</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg bg-window">
+        <div class="w-[26px] h-[26px] rounded-md bg-window shrink-0 border border-white/[0.04]"></div>
+        <div>
+          <div class="text-[11px] font-semibold text-fg1">window</div>
+          <div class="text-[10px] text-fg2 font-mono">#1C1C1E</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg bg-window">
+        <div class="w-[26px] h-[26px] rounded-md bg-card shrink-0 border border-white/[0.04]"></div>
+        <div>
+          <div class="text-[11px] font-semibold text-fg1">card</div>
+          <div class="text-[10px] text-fg2 font-mono">#2C2C2E</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg bg-window">
+        <div class="w-[26px] h-[26px] rounded-md bg-elevated shrink-0 border border-white/[0.04]"></div>
+        <div>
+          <div class="text-[11px] font-semibold text-fg1">elevated</div>
+          <div class="text-[10px] text-fg2 font-mono">#3A3A3C</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>

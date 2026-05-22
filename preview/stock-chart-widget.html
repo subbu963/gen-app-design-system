@@ -1,0 +1,209 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="../tailwind.js"></script>
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body class="m-0 p-5 bg-window font-sans">
+
+  <!-- Stock widget card -->
+  <div class="bg-card rounded-lg p-4 flex flex-col gap-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_1px_3px_rgba(0,0,0,0.35)] w-[520px] relative has-symbol overflow-hidden"
+       style="padding-top:30px;">
+    <div class="absolute top-2.5 left-3 bg-accent text-white font-mono text-[10px] font-semibold px-2 py-px rounded-full">@market</div>
+
+    <!-- header: title · status pill -->
+    <div class="flex items-center justify-between">
+      <div class="text-xs text-fg2 font-medium">AAPL · Apple Inc.</div>
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-tint-green text-green">
+          <span class="w-1 h-1 rounded-full bg-green"></span>Live
+        </span>
+        <div class="text-fg3 leading-none cursor-pointer">⋯</div>
+      </div>
+    </div>
+
+    <!-- price row -->
+    <div class="flex items-baseline gap-3">
+      <div class="text-[36px] font-bold text-fg1 -tracking-[0.025em] leading-none" id="px">$0.00</div>
+      <div class="text-sm font-semibold" id="delta">▲ +0.00 (+0.00%)</div>
+    </div>
+
+    <!-- chart-type toggle (segmented) -->
+    <div class="flex items-center justify-between">
+      <div class="text-[11px] text-fg3">Last 60 sessions · 1D</div>
+      <div class="inline-flex p-0.5 bg-base rounded-sm gap-0 select-none" role="radiogroup">
+        <button class="seg-btn px-2.5 py-1 text-[11px] font-medium text-fg1 rounded-[6px] cursor-pointer bg-elevated shadow-[0_1px_2px_rgba(0,0,0,0.3)]" data-mode="line">Line</button>
+        <button class="seg-btn px-2.5 py-1 text-[11px] font-medium text-fg1 rounded-[6px] cursor-pointer" data-mode="bar">Bars</button>
+        <button class="seg-btn px-2.5 py-1 text-[11px] font-medium text-fg1 rounded-[6px] cursor-pointer" data-mode="candle">Candles</button>
+      </div>
+    </div>
+
+    <!-- chart -->
+    <div id="chart" class="w-full h-[220px] rounded-md overflow-hidden"></div>
+
+    <!-- footer stats -->
+    <div class="flex gap-4 text-[11px] text-fg2 pt-2 border-t border-hairline">
+      <span>↑ <span class="text-fg1 font-semibold" id="hi">—</span></span>
+      <span>↓ <span class="text-fg1 font-semibold" id="lo">—</span></span>
+      <span class="ml-auto">Updated just now</span>
+    </div>
+  </div>
+
+  <script>
+    // ── 1. Generate 60 sessions of fake AAPL OHLC data ──────────────────
+    const N = 60;
+    let close = 198;
+    const rows = [];
+    const today = new Date();
+    for (let i = N - 1; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const drift = (Math.random() - 0.45) * 3.2;
+      const open  = close;
+      close = Math.max(60, open + drift);
+      const high  = Math.max(open, close) + Math.random() * 1.6;
+      const low   = Math.min(open, close) - Math.random() * 1.6;
+      rows.push({
+        time: date.toISOString().slice(0, 10),
+        open: +open.toFixed(2),
+        high: +high.toFixed(2),
+        low:  +low.toFixed(2),
+        close:+close.toFixed(2),
+      });
+    }
+
+    // ── 2. Build chart + add the three series; toggle visibility ────────
+    const container = document.getElementById('chart');
+    const cs = getComputedStyle(document.documentElement);
+    const COL = {
+      fg1:    cs.getPropertyValue('--fg1').trim()         || '#FFFFFF',
+      fg2:    cs.getPropertyValue('--fg2').trim()         || '#888',
+      fg3:    cs.getPropertyValue('--fg3').trim()         || '#666',
+      grid:   cs.getPropertyValue('--stroke-hairline').trim() || 'rgba(84,84,88,0.5)',
+      accent: cs.getPropertyValue('--color-accent').trim() || '#0A84FF',
+      green:  cs.getPropertyValue('--color-green').trim()  || '#30D158',
+      red:    cs.getPropertyValue('--color-red').trim()    || '#FF453A',
+      card:   cs.getPropertyValue('--bg-card').trim()      || '#2C2C2E',
+    };
+
+    const chart = LightweightCharts.createChart(container, {
+      width: container.clientWidth,
+      height: container.clientHeight,
+      layout: {
+        background: { type: 'solid', color: COL.card },
+        textColor: COL.fg2,
+        fontFamily: '-apple-system, "SF Pro Display", sans-serif',
+        fontSize: 11,
+      },
+      grid: {
+        vertLines: { color: 'transparent' },
+        horzLines: { color: COL.grid, style: 0 },
+      },
+      rightPriceScale: {
+        borderColor: 'transparent',
+        scaleMargins: { top: 0.1, bottom: 0.1 },
+      },
+      timeScale: {
+        borderColor: 'transparent',
+        timeVisible: false,
+      },
+      crosshair: {
+        mode: 1,
+        vertLine: { color: COL.fg3, width: 1, style: 2, labelBackgroundColor: COL.accent },
+        horzLine: { color: COL.fg3, width: 1, style: 2, labelBackgroundColor: COL.accent },
+      },
+      handleScale: { mouseWheel: false, pinch: false },
+    });
+
+    // Line series — uses {time, value}
+    const lineSeries = chart.addLineSeries({
+      color: COL.accent,
+      lineWidth: 2,
+      lastValueVisible: false,
+      priceLineVisible: false,
+    });
+    const areaSeries = chart.addAreaSeries({
+      topColor: 'rgba(10,132,255,0.22)',
+      bottomColor: 'rgba(10,132,255,0.00)',
+      lineColor: 'rgba(10,132,255,0)',
+      lastValueVisible: false,
+      priceLineVisible: false,
+    });
+    const lineData = rows.map(r => ({ time: r.time, value: r.close }));
+    lineSeries.setData(lineData);
+    areaSeries.setData(lineData);
+
+    // Bar series
+    const barSeries = chart.addBarSeries({
+      upColor: COL.green,
+      downColor: COL.red,
+      thinBars: false,
+      lastValueVisible: false,
+      priceLineVisible: false,
+    });
+    barSeries.setData(rows);
+
+    // Candle series
+    const candleSeries = chart.addCandlestickSeries({
+      upColor: COL.green,
+      downColor: COL.red,
+      borderUpColor: COL.green,
+      borderDownColor: COL.red,
+      wickUpColor: COL.green,
+      wickDownColor: COL.red,
+      lastValueVisible: false,
+      priceLineVisible: false,
+    });
+    candleSeries.setData(rows);
+
+    function setMode(mode) {
+      lineSeries.applyOptions({ visible: mode === 'line' });
+      areaSeries.applyOptions({ visible: mode === 'line' });
+      barSeries.applyOptions({ visible: mode === 'bar' });
+      candleSeries.applyOptions({ visible: mode === 'candle' });
+    }
+    setMode('line');
+
+    // ── 3. Wire segmented toggle ────────────────────────────────────────
+    document.querySelectorAll('.seg-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.seg-btn').forEach(b => {
+          b.classList.remove('bg-elevated', 'shadow-[0_1px_2px_rgba(0,0,0,0.3)]');
+        });
+        btn.classList.add('bg-elevated', 'shadow-[0_1px_2px_rgba(0,0,0,0.3)]');
+        setMode(btn.dataset.mode);
+      });
+    });
+
+    // ── 4. Fill price / delta / hi / lo from the data ───────────────────
+    const last = rows[rows.length - 1];
+    const first = rows[0];
+    const change = last.close - first.close;
+    const pct = (change / first.close) * 100;
+    const up = change >= 0;
+    document.getElementById('px').textContent = '$' + last.close.toFixed(2);
+    document.getElementById('delta').textContent =
+      (up ? '▲ +' : '▼ ') + Math.abs(change).toFixed(2) +
+      ' (' + (up ? '+' : '') + pct.toFixed(2) + '%)';
+    document.getElementById('delta').style.color = up ? COL.green : COL.red;
+    const all = rows.flatMap(r => [r.high, r.low]);
+    document.getElementById('hi').textContent = '$' + Math.max(...all).toFixed(2);
+    document.getElementById('lo').textContent = '$' + Math.min(...all).toFixed(2);
+
+    // expose for debugging from console
+    window._chart = chart;
+
+    // fit content
+    chart.timeScale().fitContent();
+
+    // Keep chart sized to its container (autoSize is unreliable inside iframes
+    // with html-to-image / hidden tabs)
+    const fitChartToContainer = () => {
+      const r = container.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) chart.resize(r.width, r.height);
+    };
+    requestAnimationFrame(fitChartToContainer);
+    new ResizeObserver(fitChartToContainer).observe(container);
+    window.addEventListener('resize', fitChartToContainer);
+  </script>
+</body></html>

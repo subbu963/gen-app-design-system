@@ -1,0 +1,35 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="../tailwind.js"></script>
+</head>
+<body class="m-0 p-0 bg-window font-sans min-h-[240px] grid grid-cols-[180px_1fr]">
+  <div class="bg-base border-r border-soft py-3.5 pr-2 pl-3.5 flex flex-col gap-0.5">
+    <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold px-2.5 pt-1 pb-2">Settings</div>
+    <div class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-accent font-medium bg-accent-tint"><div class="w-5 h-5 rounded-md inline-flex items-center justify-center text-white text-[10px] font-bold shrink-0 bg-accent">✦</div>Providers</div>
+    <div class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-fg1 font-medium"><div class="w-5 h-5 rounded-md inline-flex items-center justify-center text-white text-[10px] font-bold shrink-0 bg-teal">≋</div>Embeddings</div>
+    <div class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-fg1 font-medium"><div class="w-5 h-5 rounded-md inline-flex items-center justify-center text-white text-[10px] font-bold shrink-0 bg-purple">⚉</div>Extensions</div>
+    <div class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs text-fg1 font-medium"><div class="w-5 h-5 rounded-md inline-flex items-center justify-center text-white text-[10px] font-bold shrink-0" style="background:#8E8E93">≡</div>Logs</div>
+  </div>
+  <div class="px-[18px] py-3.5 flex flex-col gap-3.5">
+    <div class="text-lg font-bold text-fg1 -tracking-[0.012em]">Providers</div>
+    <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold">Available</div>
+    <div class="bg-card rounded-[10px]">
+      <div class="flex items-center gap-2.5 px-3 py-[9px] border-b border-hairline">
+        <div class="w-5 h-5 rounded-md inline-flex items-center justify-center text-white text-[10px] font-bold shrink-0" style="background:#FF9F0A">G</div>
+        <div class="flex-1 min-w-0"><div class="text-sm text-fg1">Groq</div><div class="text-[11px] text-fg2">llama-3.3-70b · 0.4s avg</div></div>
+        <span class="bg-tint-green text-green text-[10px] font-semibold px-1.5 py-0.5 rounded-full">active</span>
+      </div>
+      <div class="flex items-center gap-2.5 px-3 py-[9px] border-b border-hairline">
+        <div class="w-5 h-5 rounded-md inline-flex items-center justify-center text-white text-[10px] font-bold shrink-0" style="background:#5E5CE6">OR</div>
+        <div class="flex-1 min-w-0"><div class="text-sm text-fg1">OpenRouter</div><div class="text-[11px] text-fg2">Any model · pay-per-use</div></div>
+        <span class="text-[11px] text-fg2">ready</span>
+      </div>
+      <div class="flex items-center gap-2.5 px-3 py-[9px]">
+        <div class="w-5 h-5 rounded-md inline-flex items-center justify-center text-white text-[10px] font-bold shrink-0 bg-green">●</div>
+        <div class="flex-1 min-w-0"><div class="text-sm text-fg1">Ollama (local)</div><div class="text-[11px] text-fg2">Port 11434 · not running</div></div>
+        <span class="text-[11px] text-fg2">offline</span>
+      </div>
+    </div>
+  </div>
+</body></html>

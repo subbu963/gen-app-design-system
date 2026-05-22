@@ -1,0 +1,35 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="../tailwind.js"></script>
+</head>
+<body class="m-0 p-[18px] bg-window font-sans flex flex-col gap-2.5">
+  <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold flex justify-between items-center">
+    <span>Live · last 30 min</span>
+    <span class="flex gap-1.5">
+      <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-tint-green text-green">info 6</span>
+      <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-tint-orange text-orange">warn 1</span>
+      <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-tint-red text-red">err 1</span>
+    </span>
+  </div>
+  <div class="bg-base border border-soft rounded-sm py-1.5 font-mono text-[10.5px]">
+    <div class="grid grid-cols-[84px_38px_88px_1fr] gap-1.5 px-2.5 py-0.5 border-l-2 border-transparent items-baseline">
+      <span class="text-fg3">09:41:22.014</span><span class="font-bold text-[9.5px] text-fg2">INFO</span><span class="text-accent">chat</span><span class="text-fg1 break-all">→ groq · llama-3.3-70b · 412 tokens</span>
+    </div>
+    <div class="grid grid-cols-[84px_38px_88px_1fr] gap-1.5 px-2.5 py-0.5 border-l-2 border-transparent items-baseline">
+      <span class="text-fg3">09:41:22.428</span><span class="font-bold text-[9.5px] text-fg2">INFO</span><span class="text-accent">chat</span><span class="text-fg1 break-all">← tool_call: create_widget(weather, brooklyn)</span>
+    </div>
+    <div class="grid grid-cols-[84px_38px_88px_1fr] gap-1.5 px-2.5 py-0.5 border-l-2 border-transparent items-baseline">
+      <span class="text-fg3">09:41:22.430</span><span class="font-bold text-[9.5px] text-fg2">INFO</span><span class="text-accent">widget</span><span class="text-fg1 break-all">spawn @weather (id w-1747824082)</span>
+    </div>
+    <div class="grid grid-cols-[84px_38px_88px_1fr] gap-1.5 px-2.5 py-0.5 border-l-2 border-transparent items-baseline">
+      <span class="text-fg3">09:41:22.512</span><span class="font-bold text-[9.5px] text-fg2">INFO</span><span class="text-accent">ext:meteo</span><span class="text-fg1 break-all">GET /v1/forecast?lat=40.6782&amp;lon=-73.9442 · 200 · 88ms</span>
+    </div>
+    <div class="grid grid-cols-[84px_38px_88px_1fr] gap-1.5 px-2.5 py-0.5 border-l-2 items-baseline" style="border-left-color:var(--color-orange);background:rgba(255,159,10,0.04)">
+      <span class="text-fg3">09:42:17.882</span><span class="font-bold text-[9.5px] text-orange">WARN</span><span class="text-accent">ext:yahoo</span><span class="text-fg1 break-all">rate-limit: backing off 30s</span>
+    </div>
+    <div class="grid grid-cols-[84px_38px_88px_1fr] gap-1.5 px-2.5 py-0.5 border-l-2 items-baseline" style="border-left-color:var(--color-red);background:rgba(255,69,58,0.04)">
+      <span class="text-fg3">09:43:02.044</span><span class="font-bold text-[9.5px] text-red">ERROR</span><span class="text-accent">embed</span><span class="text-fg1 break-all">local llama.cpp · timeout after 5000ms</span>
+    </div>
+  </div>
+</body></html>

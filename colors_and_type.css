@@ -1,0 +1,332 @@
+/* ============================================================
+   gen-app design system — foundations
+   iOS dark theme · Konsta UI · macOS desktop + iOS phone
+   ============================================================ */
+
+/* -- Fonts ------------------------------------------------- */
+/* Body / UI: native SF stack (Apple's system family).
+   Wordmark / playful display: Instrument Serif (Google Fonts).
+   Mono: native SF Mono / ui-monospace. */
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap");
+
+:root, :root[data-theme="dark"] {
+  /* ---------- Brand & accents ---------- */
+  --color-accent:           #0A84FF;   /* iOS system blue (dark) */
+  --color-accent-press:     #409CFF;   /* hover/press lift */
+  --color-accent-tint:      rgba(10, 132, 255, 0.14);
+  --color-accent-glow:      rgba(10, 132, 255, 0.28);
+
+  /* ---------- Surfaces (canvas → card → popover) ---------- */
+  --bg-base:                #000000;   /* sheet under everything */
+  --bg-window:              #1C1C1E;   /* primary app bg (spec) */
+  --bg-card:                #2C2C2E;   /* widgets, cards (spec) */
+  --bg-card-elevated:       #3A3A3C;   /* popovers, dropdowns */
+  --bg-input:               #1C1C1E;   /* fields sit IN cards → match window */
+  --bg-hover:               rgba(255, 255, 255, 0.04);
+  --bg-press:               rgba(255, 255, 255, 0.08);
+  --bg-selected:            rgba(10, 132, 255, 0.18);
+  --bg-overlay:             rgba(0, 0, 0, 0.55);  /* sheet scrim */
+
+  /* ---------- Foreground / text ---------- */
+  --fg1:                    #FFFFFF;             /* primary label */
+  --fg2:                    rgba(235, 235, 245, 0.60);  /* secondary */
+  --fg3:                    rgba(235, 235, 245, 0.30);  /* tertiary / disabled */
+  --fg4:                    rgba(235, 235, 245, 0.18);  /* quaternary */
+  --fg-on-accent:           #FFFFFF;
+
+  /* ---------- Strokes / separators ---------- */
+  --stroke-hairline:        rgba(84, 84, 88, 0.65);     /* iOS separator */
+  --stroke-soft:            rgba(255, 255, 255, 0.06);
+  --stroke-focus:           rgba(10, 132, 255, 0.55);
+
+  /* ---------- Status colors (iOS systemX dark variants) ---------- */
+  --color-green:            #30D158;
+  --color-mint:             #63E6E2;
+  --color-teal:             #64D2FF;
+  --color-cyan:             #5AC8FA;
+  --color-indigo:           #5E5CE6;
+  --color-purple:           #BF5AF2;
+  --color-pink:             #FF375F;
+  --color-red:              #FF453A;
+  --color-orange:           #FF9F0A;
+  --color-yellow:           #FFD60A;
+  --color-brown:            #AC8E68;
+
+  /* Tints (for soft chips / status pills) */
+  --tint-green:             rgba(48, 209, 88, 0.16);
+  --tint-orange:            rgba(255, 159, 10, 0.16);
+  --tint-red:               rgba(255, 69, 58, 0.16);
+  --tint-yellow:            rgba(255, 214, 10, 0.16);
+  --tint-purple:            rgba(191, 90, 242, 0.16);
+
+  /* dock / nav vibrancy backgrounds */
+  --vibrancy-dock:    rgba(28, 28, 30, 0.72);
+  --vibrancy-sheet:   rgba(44, 44, 46, 0.86);
+  --vibrancy-popover: rgba(58, 58, 60, 0.92);
+}
+
+/* ============================================================
+   Light theme — iOS HIG light variants
+   Activated by [data-theme="light"] on <html>, or by
+   prefers-color-scheme: light when [data-theme="auto"].
+   ============================================================ */
+:root[data-theme="light"] {
+  --color-accent:           #007AFF;   /* iOS system blue (light) */
+  --color-accent-press:     #0062CC;
+  --color-accent-tint:      rgba(0, 122, 255, 0.10);
+  --color-accent-glow:      rgba(0, 122, 255, 0.22);
+
+  --bg-base:                #FFFFFF;            /* outermost */
+  --bg-window:              #F2F2F7;            /* iOS systemGroupedBackground */
+  --bg-card:                #FFFFFF;            /* card surfaces float on grouped bg */
+  --bg-card-elevated:       #FFFFFF;            /* popovers — same, but cast a shadow */
+  --bg-input:               #F2F2F7;
+  --bg-hover:               rgba(0, 0, 0, 0.03);
+  --bg-press:               rgba(0, 0, 0, 0.06);
+  --bg-selected:            rgba(0, 122, 255, 0.10);
+  --bg-overlay:             rgba(0, 0, 0, 0.35);
+
+  --fg1:                    #000000;
+  --fg2:                    rgba(60, 60, 67, 0.60);
+  --fg3:                    rgba(60, 60, 67, 0.30);
+  --fg4:                    rgba(60, 60, 67, 0.18);
+  --fg-on-accent:           #FFFFFF;
+
+  --stroke-hairline:        rgba(60, 60, 67, 0.18);
+  --stroke-soft:            rgba(0, 0, 0, 0.06);
+  --stroke-focus:           rgba(0, 122, 255, 0.55);
+
+  /* Status — slightly more saturated in light mode */
+  --color-green:   #34C759;
+  --color-mint:    #00C7BE;
+  --color-teal:    #30B0C7;
+  --color-cyan:    #32ADE6;
+  --color-indigo:  #5856D6;
+  --color-purple:  #AF52DE;
+  --color-pink:    #FF2D55;
+  --color-red:     #FF3B30;
+  --color-orange:  #FF9500;
+  --color-yellow:  #FFCC00;
+  --color-brown:   #A2845E;
+
+  --tint-green:   rgba(52, 199, 89, 0.14);
+  --tint-orange:  rgba(255, 149, 0, 0.14);
+  --tint-red:     rgba(255, 59, 48, 0.14);
+  --tint-yellow:  rgba(255, 204, 0, 0.18);
+  --tint-purple:  rgba(175, 82, 222, 0.14);
+
+  --vibrancy-dock:    rgba(255, 255, 255, 0.72);
+  --vibrancy-sheet:   rgba(242, 242, 247, 0.88);
+  --vibrancy-popover: rgba(255, 255, 255, 0.92);
+}
+
+/* Auto theme — follow OS preference */
+@media (prefers-color-scheme: light) {
+  :root[data-theme="auto"] {
+    --color-accent:        #007AFF;
+    --color-accent-press:  #0062CC;
+    --color-accent-tint:   rgba(0, 122, 255, 0.10);
+    --color-accent-glow:   rgba(0, 122, 255, 0.22);
+
+    --bg-base:             #FFFFFF;
+    --bg-window:           #F2F2F7;
+    --bg-card:             #FFFFFF;
+    --bg-card-elevated:    #FFFFFF;
+    --bg-input:            #F2F2F7;
+    --bg-hover:            rgba(0, 0, 0, 0.03);
+    --bg-press:            rgba(0, 0, 0, 0.06);
+    --bg-selected:         rgba(0, 122, 255, 0.10);
+    --bg-overlay:          rgba(0, 0, 0, 0.35);
+
+    --fg1: #000000;
+    --fg2: rgba(60, 60, 67, 0.60);
+    --fg3: rgba(60, 60, 67, 0.30);
+    --fg4: rgba(60, 60, 67, 0.18);
+
+    --stroke-hairline: rgba(60, 60, 67, 0.18);
+    --stroke-soft:     rgba(0, 0, 0, 0.06);
+    --stroke-focus:    rgba(0, 122, 255, 0.55);
+
+    --color-green:   #34C759;
+    --color-red:     #FF3B30;
+    --color-orange:  #FF9500;
+    --color-yellow:  #FFCC00;
+    --color-purple:  #AF52DE;
+    --color-pink:    #FF2D55;
+
+    --tint-green:   rgba(52, 199, 89, 0.14);
+    --tint-orange:  rgba(255, 149, 0, 0.14);
+    --tint-red:     rgba(255, 59, 48, 0.14);
+    --tint-yellow:  rgba(255, 204, 0, 0.18);
+    --tint-purple:  rgba(175, 82, 222, 0.14);
+
+    --vibrancy-dock:    rgba(255, 255, 255, 0.72);
+    --vibrancy-sheet:   rgba(242, 242, 247, 0.88);
+    --vibrancy-popover: rgba(255, 255, 255, 0.92);
+  }
+}
+
+:root {
+
+  /* ---------- Type families ---------- */
+  --font-sans:    -apple-system, BlinkMacSystemFont, "SF Pro Display",
+                  "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono:    ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco,
+                  "JetBrains Mono", Consolas, monospace;
+  --font-brand:   "Instrument Serif", "Iowan Old Style", "Apple Garamond",
+                  Georgia, serif;            /* wordmark + playful accents */
+
+  /* ---------- Type scale (iOS HIG-aligned, slightly larger for desktop) ---------- */
+  --text-2xs:   11px;   /* caption2 — timestamps */
+  --text-xs:    12px;   /* caption1 */
+  --text-sm:    13px;   /* footnote */
+  --text-base:  15px;   /* subheadline / body-ish */
+  --text-md:    17px;   /* body (iOS default) */
+  --text-lg:    20px;   /* title3 */
+  --text-xl:    22px;   /* title2 */
+  --text-2xl:   28px;   /* title1 */
+  --text-3xl:   34px;   /* large title */
+  --text-4xl:   44px;   /* hero (desktop) */
+
+  /* line heights */
+  --leading-tight:  1.15;
+  --leading-snug:   1.30;
+  --leading-normal: 1.45;
+  --leading-loose:  1.6;
+
+  /* weights — SF supports the full range */
+  --weight-regular: 400;
+  --weight-medium:  500;
+  --weight-semibold:600;
+  --weight-bold:    700;
+
+  /* tracking — iOS tightens display sizes */
+  --track-tight:    -0.022em;
+  --track-snug:     -0.012em;
+  --track-normal:    0em;
+  --track-wide:     0.04em;
+
+  /* ---------- Spacing (4pt grid) ---------- */
+  --space-0:   0px;
+  --space-1:   2px;
+  --space-2:   4px;
+  --space-3:   8px;
+  --space-4:  12px;
+  --space-5:  16px;
+  --space-6:  20px;
+  --space-7:  24px;
+  --space-8:  32px;
+  --space-9:  40px;
+  --space-10: 48px;
+  --space-11: 64px;
+  --space-12: 80px;
+
+  /* ---------- Radii (continuous corners on iOS — use generous radii) ---------- */
+  --radius-xs:   4px;   /* chip, badge */
+  --radius-sm:   8px;   /* button, small input */
+  --radius-md:  10px;   /* tile */
+  --radius-lg:  14px;   /* widget card (iOS default) */
+  --radius-xl:  18px;   /* sheet, large card */
+  --radius-2xl: 22px;   /* iPhone screen-edge radius */
+  --radius-3xl: 28px;   /* huge surface */
+  --radius-pill: 999px;
+
+  /* ---------- Shadow / elevation ---------- */
+  /* Dark UIs depend on stacked surfaces + hairlines more than shadows.
+     These exist for floating elements only. */
+  --elev-0: none;
+  --elev-1: 0 1px 0 0 rgba(255,255,255,0.02) inset,
+            0 1px 2px 0 rgba(0,0,0,0.35);
+  --elev-2: 0 1px 0 0 rgba(255,255,255,0.04) inset,
+            0 4px 12px -2px rgba(0,0,0,0.45),
+            0 1px 3px 0 rgba(0,0,0,0.40);
+  --elev-3: 0 1px 0 0 rgba(255,255,255,0.05) inset,
+            0 12px 32px -8px rgba(0,0,0,0.55),
+            0 4px 12px -2px rgba(0,0,0,0.40);
+  --elev-4: 0 24px 60px -12px rgba(0,0,0,0.70),
+            0 8px 24px -4px rgba(0,0,0,0.50);
+  --glow-accent: 0 0 0 1px var(--stroke-focus),
+                 0 0 0 4px var(--color-accent-glow);
+
+  /* ---------- Motion ---------- */
+  --ease-standard:  cubic-bezier(0.4, 0.0, 0.2, 1);     /* most UI */
+  --ease-emphasized: cubic-bezier(0.2, 0.8, 0.2, 1);    /* enter */
+  --ease-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);  /* playful pop */
+  --dur-1:  120ms;   /* hover, color swap */
+  --dur-2:  200ms;   /* state change */
+  --dur-3:  320ms;   /* sheet / dock */
+  --dur-4:  480ms;   /* page transition */
+
+  /* ---------- Blur / vibrancy (used on dock, sheets) ---------- */
+  --blur-thin:    blur(20px) saturate(140%);
+  --blur-regular: blur(30px) saturate(160%);
+  --blur-thick:   blur(60px) saturate(180%);
+}
+
+/* ============================================================
+   Semantic typography
+   ============================================================ */
+html, body {
+  background: var(--bg-window);
+  color: var(--fg1);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.h1, h1.brand-h1 {
+  font-family: var(--font-sans);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--track-tight);
+  color: var(--fg1);
+}
+.h2 {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--track-tight);
+  color: var(--fg1);
+}
+.h3 {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--track-snug);
+  color: var(--fg1);
+}
+.h4 {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+  color: var(--fg1);
+}
+
+.body       { font-size: var(--text-md); line-height: var(--leading-normal); color: var(--fg1); }
+.body-2     { font-size: var(--text-base); line-height: var(--leading-normal); color: var(--fg2); }
+.footnote   { font-size: var(--text-sm); line-height: var(--leading-snug); color: var(--fg2); }
+.caption    { font-size: var(--text-xs); line-height: var(--leading-snug); color: var(--fg2); letter-spacing: 0.01em; }
+.overline   { font-size: var(--text-2xs); line-height: 1.2; color: var(--fg3);
+              text-transform: uppercase; letter-spacing: var(--track-wide); font-weight: var(--weight-semibold); }
+
+.code, code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: var(--bg-input);
+  border: 1px solid var(--stroke-soft);
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  color: var(--fg1);
+}
+
+/* Brand display — used for the wordmark and the occasional playful flourish.
+   Keep usage RARE; default UI stays SF. */
+.brand-display {
+  font-family: var(--font-brand);
+  font-weight: var(--weight-regular);
+  letter-spacing: -0.01em;
+  font-style: italic;
+}

@@ -1,0 +1,31 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="../tailwind.js"></script>
+<style>
+  @keyframes slide { 0%, 100% { transform: translateX(0); background: var(--bg-card); } 50% { transform: translateX(40px); background: var(--color-accent); } }
+  .a-standard { animation: slide 1.6s var(--ease-standard) infinite; }
+  .a-spring   { animation: slide 1.6s var(--ease-spring) infinite; }
+  .a-emph     { animation: slide 1.6s var(--ease-emphasized) infinite; }
+</style>
+</head>
+<body class="m-0 p-[22px] bg-window font-sans flex flex-col gap-2.5">
+  <div class="flex items-center gap-[14px] py-1.5 border-b border-hairline">
+    <div class="font-mono text-[11px] text-fg1 w-[110px] shrink-0 font-semibold">standard</div>
+    <div class="font-mono text-[10px] text-fg2 w-20 shrink-0">200ms</div>
+    <div class="text-xs text-fg2 flex-1">state change · color · opacity</div>
+    <div class="w-[60px] h-[22px] bg-card rounded-xs border border-soft a-standard"></div>
+  </div>
+  <div class="flex items-center gap-[14px] py-1.5 border-b border-hairline">
+    <div class="font-mono text-[11px] text-fg1 w-[110px] shrink-0 font-semibold">emphasized</div>
+    <div class="font-mono text-[10px] text-fg2 w-20 shrink-0">320ms</div>
+    <div class="text-xs text-fg2 flex-1">enter · sheet open</div>
+    <div class="w-[60px] h-[22px] bg-card rounded-xs border border-soft a-emph"></div>
+  </div>
+  <div class="flex items-center gap-[14px] py-1.5">
+    <div class="font-mono text-[11px] text-fg1 w-[110px] shrink-0 font-semibold">spring</div>
+    <div class="font-mono text-[10px] text-fg2 w-20 shrink-0">320ms</div>
+    <div class="text-xs text-fg2 flex-1">widget create · tag confirm</div>
+    <div class="w-[60px] h-[22px] bg-card rounded-xs border border-soft a-spring"></div>
+  </div>
+</body></html>

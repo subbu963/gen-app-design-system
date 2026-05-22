@@ -1,0 +1,25 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="../tailwind.js"></script>
+</head>
+<body class="m-0 p-[22px] bg-window font-sans flex flex-col gap-[14px]">
+  <div class="bg-card rounded-md px-3">
+    <div class="flex items-center py-2.5 border-b border-hairline gap-3">
+      <div class="text-sm text-fg1 min-w-24">Provider</div>
+      <input value="OpenRouter" readonly class="flex-1 bg-transparent border-none text-fg1 text-base outline-none font-sans" />
+    </div>
+    <div class="flex items-center py-2.5 border-b border-hairline gap-3">
+      <div class="text-sm text-fg1 min-w-24">API key</div>
+      <input type="text" value="sk-or-v1-••••••••••12c4" class="flex-1 bg-transparent border-none text-fg1 text-sm outline-none font-mono tracking-wider" />
+    </div>
+    <div class="flex items-center py-2.5 gap-3">
+      <div class="text-sm text-fg1 min-w-24">Model</div>
+      <div class="text-fg2 text-sm ml-auto">claude-sonnet-4.5 ›</div>
+    </div>
+  </div>
+  <div class="flex items-center gap-2 px-3 py-2.5 bg-card rounded-sm border-[1.5px] border-accent">
+    <input placeholder="Add a weather widget for Brooklyn…" class="border-none outline-none bg-transparent text-fg1 text-base flex-1 font-sans" />
+    <button class="bg-accent border-none w-7 h-7 rounded-full text-white font-semibold text-sm cursor-pointer">↑</button>
+  </div>
+</body></html>

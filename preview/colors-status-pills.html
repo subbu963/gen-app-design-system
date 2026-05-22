@@ -1,0 +1,31 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="../tailwind.js"></script>
+</head>
+<body class="m-0 p-[22px] bg-window font-sans flex flex-col gap-3">
+  <div class="text-[11px] text-fg3 uppercase tracking-[0.06em] font-semibold">Status pills · soft tint + filled dot</div>
+  <div class="flex gap-2.5 flex-wrap">
+    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-tint-green text-green">
+      <span class="w-1.5 h-1.5 rounded-full bg-green"></span>Live
+    </div>
+    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-tint-orange text-orange">
+      <span class="w-1.5 h-1.5 rounded-full bg-orange"></span>Stale
+    </div>
+    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-tint-red text-red">
+      <span class="w-1.5 h-1.5 rounded-full bg-red"></span>Errored
+    </div>
+    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-tint-yellow text-yellow">
+      <span class="w-1.5 h-1.5 rounded-full bg-yellow"></span>Pending
+    </div>
+    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-tint-purple text-purple">
+      <span class="w-1.5 h-1.5 rounded-full bg-purple"></span>Local
+    </div>
+  </div>
+  <div class="flex gap-2.5 flex-wrap mt-1">
+    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-card text-fg2 border border-soft">Idle</div>
+    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-accent-tint text-accent">
+      <span class="w-1.5 h-1.5 rounded-full bg-accent"></span>Selected
+    </div>
+  </div>
+</body></html>
