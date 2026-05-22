@@ -563,12 +563,204 @@ body { margin: 0; background: #0a0a0c; }
 /* iOS header bar (canvas screen) */
 .ios-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 4px 16px 8px; flex-shrink: 0;
+  padding: 4px 14px 8px; flex-shrink: 0;
+  gap: 8px;
 }
 .ios-header-ttl {
   font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: var(--fg1);
 }
 .ios-header-gear { width: 32px; height: 32px; }
+
+/* iOS canvas dropdown trigger */
+.ios-header-canvas {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: transparent; border: none; padding: 4px 6px;
+  border-radius: 6px; cursor: pointer;
+  font: inherit; font-size: 22px; font-weight: 700; letter-spacing: -0.02em;
+  color: var(--fg1);
+  max-width: 240px;
+}
+.ios-header-canvas:hover { background: var(--bg-hover); }
+.ios-header-canvas > span:first-child {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ios-canvas-popover {
+  position: absolute; top: 100%; left: 0; margin-top: 4px;
+  background: var(--vibrancy-popover);
+  backdrop-filter: var(--blur-thin);
+  -webkit-backdrop-filter: var(--blur-thin);
+  border: 1px solid var(--stroke-soft);
+  border-radius: var(--radius-md);
+  padding: 4px; z-index: 70;
+  min-width: 200px;
+  box-shadow: var(--elev-3);
+  display: flex; flex-direction: column; gap: 1px;
+  animation: dock-menu-in 160ms var(--ease-emphasized);
+}
+.ios-canvas-popover-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 6px;
+  font: inherit; font-size: 14px; color: var(--fg1);
+  background: transparent; border: none; cursor: pointer; text-align: left;
+  transition: background 100ms;
+}
+.ios-canvas-popover-row:hover { background: var(--bg-hover); }
+.ios-canvas-popover-row.on { color: var(--color-accent); }
+.ios-canvas-popover-row > span:first-child { flex: 1; }
+.ios-canvas-popover-sep { height: 1px; background: var(--stroke-hairline); margin: 4px 6px; }
+
+/* Desktop canvas tab strip — sits between toolbar and canvas */
+.canvas-tabs {
+  display: flex; align-items: stretch; gap: 2px;
+  padding: 6px 10px 0;
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--stroke-soft);
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.canvas-tab {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 8px 6px 12px;
+  background: transparent; color: var(--fg2);
+  border-radius: 6px 6px 0 0;
+  font-size: 12px; font-weight: 500;
+  cursor: pointer; user-select: none;
+  border: 1px solid transparent; border-bottom: none;
+  margin-bottom: -1px;
+  max-width: 200px;
+  transition: background 120ms, color 120ms;
+}
+.canvas-tab:hover { background: var(--bg-hover); color: var(--fg1); }
+.canvas-tab.on {
+  background: var(--bg-window); color: var(--fg1);
+  border-color: var(--stroke-soft);
+}
+.canvas-tab-name {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 160px;
+}
+.canvas-tab-input {
+  background: transparent; border: 1px solid var(--color-accent);
+  border-radius: 3px; outline: none; color: var(--fg1);
+  font: inherit; font-size: 12px; font-weight: 500;
+  padding: 0 4px; max-width: 140px;
+}
+.canvas-tab-close {
+  background: transparent; border: none; cursor: pointer;
+  width: 18px; height: 18px; border-radius: 4px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0; opacity: 0.7;
+}
+.canvas-tab-close:hover { background: var(--bg-press); opacity: 1; }
+.canvas-tab-new {
+  background: transparent; border: none; cursor: pointer;
+  padding: 6px 10px; border-radius: 6px 6px 0 0;
+  color: var(--fg2);
+  display: inline-flex; align-items: center; justify-content: center;
+  margin-bottom: -1px;
+  transition: background 120ms, color 120ms;
+}
+.canvas-tab-new:hover { background: var(--bg-hover); color: var(--fg1); }
+
+/* Dock head button + menu */
+.dock-head-btn {
+  background: transparent; border: none; cursor: pointer;
+  width: 24px; height: 24px; border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0; transition: background 120ms;
+  flex-shrink: 0;
+}
+.dock-head-btn:hover { background: var(--bg-hover); }
+.dock-head-menu {
+  position: absolute; top: 28px; right: 0;
+  background: var(--vibrancy-popover);
+  backdrop-filter: var(--blur-thin);
+  -webkit-backdrop-filter: var(--blur-thin);
+  border: 1px solid var(--stroke-soft);
+  border-radius: var(--radius-md);
+  padding: 4px; min-width: 200px; z-index: 60;
+  box-shadow: var(--elev-3);
+  display: flex; flex-direction: column; gap: 1px;
+  animation: dock-menu-in 160ms var(--ease-emphasized);
+}
+.dock-head-menu-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 10px; border-radius: 6px;
+  font: inherit; font-size: 13px; color: var(--fg1);
+  background: transparent; border: none; cursor: pointer; text-align: left;
+  transition: background 100ms;
+  white-space: nowrap;
+}
+.dock-head-menu-row:hover { background: var(--bg-hover); }
+.dock-head-menu-sep { height: 1px; background: var(--stroke-hairline); margin: 4px 6px; }
+@keyframes dock-menu-in { from { opacity: 0; transform: translateY(-4px) scale(0.97); } to { opacity: 1; transform: none; } }
+
+/* Session history sheet — overlays the dock body */
+.dock-history {
+  position: absolute; inset: 44px 0 0 0; /* below the head */
+  background: var(--vibrancy-sheet);
+  backdrop-filter: var(--blur-regular);
+  -webkit-backdrop-filter: var(--blur-regular);
+  display: flex; flex-direction: column;
+  z-index: 5;
+  animation: dock-menu-in 200ms var(--ease-emphasized);
+}
+.dock-history-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--stroke-hairline);
+  flex-shrink: 0;
+}
+.dock-history-list {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 8px 6px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.dock-history-row {
+  display: flex; align-items: stretch;
+  background: var(--bg-card); border-radius: 8px;
+  border: 1px solid var(--stroke-soft);
+  transition: background 120ms;
+}
+.dock-history-row:hover { background: var(--bg-card-elevated); }
+.dock-history-row-main {
+  flex: 1; min-width: 0; text-align: left;
+  background: transparent; border: none; cursor: pointer;
+  padding: 8px 10px;
+  display: flex; flex-direction: column; gap: 2px;
+  font: inherit; color: var(--fg1);
+}
+.dock-history-row-name {
+  font-size: 13px; font-weight: 500;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 100%;
+}
+.dock-history-row-meta {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10px; color: var(--fg2);
+}
+.dock-history-row-delete {
+  background: transparent; border: none; cursor: pointer;
+  width: 32px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-left: 1px solid var(--stroke-soft);
+  opacity: 0.5; transition: opacity 120ms, background 120ms;
+}
+.dock-history-row-delete:hover { opacity: 1; background: var(--tint-red); }
+
+.dock-history-empty {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px;
+  padding: 20px;
+}
+.dock-history-empty-mark {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--bg-card-elevated);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 4px;
+}
+
 
 /* Logs */
 .logs {

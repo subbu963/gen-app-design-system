@@ -1,7 +1,10 @@
 /* App — state machine that drives the whole click-thru.
    Renders both a Desktop frame AND an iPhone frame side-by-side so the user
-   can see the dual form factor in one view.  The Tweaks panel toggles which
-   iOS dock variant is shown. */
+   can see the dual form factor in one view. Tweaks toggles demo state.
+
+   v0.5.0 — supports multiple canvases. Each canvas has its own widgets,
+   selected[], and chat history. Active canvas index is tracked at the App level.
+*/
 
 /* ---------- Seed data (model would emit these) ---------- */
 const SEED_WEATHER = { id: "w1", kind: "weather", symbol: "weather", city: "Brooklyn, NY", temp: 68, hi: 72, lo: 58, condition: "Mostly sunny · feels 70°", ago: "3 min" };
@@ -12,20 +15,28 @@ const SEED_CALENDAR = { id: "w3", kind: "calendar", symbol: "today", date: "Wed 
   { time: "18:45", title: "Dinner — Bar Pisellino" },
 ]};
 
+const SYSTEM_HELLO = { role: "system", content: "Connected to Claude Code · sonnet" };
+
+function makeCanvas(name, widgets = []) {
+  return {
+    id: "c-" + Math.random().toString(36).slice(2, 8),
+    name,
+    widgets,
+    selected: [],
+    messages: [SYSTEM_HELLO],
+    sessions: [], // archived chat sessions
+  };
+}
+
 /* Match a user prompt → a widget spec or a modify intent. */
 function routePrompt(text, addressedIds, widgets) {
   const t = text.toLowerCase();
-  // Modify intent — addressed widgets exist
-  if (addressedIds && addressedIds.length > 0) {
-    return { intent: "modify", ids: addressedIds, text };
-  }
-  // Symbol reference in the text (e.g. "summarize @market")
+  if (addressedIds && addressedIds.length > 0) return { intent: "modify", ids: addressedIds, text };
   const mentions = [...text.matchAll(/@(\w[\w-]*)/g)].map(m => m[1]);
   if (mentions.length > 0) {
     const targets = widgets.filter(w => mentions.includes(w.symbol));
     if (targets.length > 0) return { intent: "reference", ids: targets.map(w => w.id), mentions, text };
   }
-  // Create intent — keyword routing
   if (t.includes("weather") || t.includes("forecast") || t.includes("brooklyn")) return { intent: "create", widget: { ...SEED_WEATHER, id: "w-" + Date.now(), symbol: "weather" } };
   if (t.includes("stock") || t.includes("aapl") || t.includes("chart") || t.includes("ticker") || t.includes("market")) return { intent: "create", widget: { ...SEED_STOCK, id: "w-" + Date.now(), symbol: "market" } };
   if (t.includes("calendar") || t.includes("agenda") || t.includes("today")) return { intent: "create", widget: { ...SEED_CALENDAR, id: "w-" + Date.now(), symbol: "today" } };
@@ -45,62 +56,130 @@ function aiReplyFor(result, widgets) {
     const symbols = targets.map(t => `@${t.symbol || t.kind}`).join(", ");
     return `Updated ${symbols}.`;
   }
-  if (result.intent === "reference") {
-    return `Reading ${result.mentions.map(m => `@${m}`).join(", ")}…`;
-  }
+  if (result.intent === "reference") return `Reading ${result.mentions.map(m => `@${m}`).join(", ")}…`;
   return "I can build weather, stocks, or calendars right now. Try one of those?";
 }
 
-/* ---------- Reducer ---------- */
-function useChatCanvas(initialWidgets = []) {
-  const [widgets, setWidgets] = React.useState(initialWidgets);
-  const [selected, setSelected] = React.useState([]);
-  const [messages, setMessages] = React.useState([
-    { role: "system", content: "Connected to Groq · llama-3.3-70b" },
-  ]);
+/* ---------- Canvases reducer ---------- */
+function useCanvases(seedFirstWith = []) {
+  const [canvases, setCanvases] = React.useState(() => [makeCanvas("Canvas 1", seedFirstWith)]);
+  const [activeId, setActiveId] = React.useState(() => canvases[0]?.id);
 
-  const select = (id) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const active = canvases.find(c => c.id === activeId) || canvases[0];
+
+  // operate on active canvas (immutable update)
+  const updateActive = (fn) => setCanvases(prev => prev.map(c => c.id === activeId ? fn(c) : c));
+
+  const select = (id) => updateActive(c => ({ ...c, selected: c.selected.includes(id) ? c.selected.filter(x => x !== id) : [...c.selected, id] }));
+  const clearSelected = () => updateActive(c => ({ ...c, selected: [] }));
+  const addressInChat = (id) => updateActive(c => ({ ...c, selected: [id] }));
 
   const send = (text, addressedIds = []) => {
-    setMessages(prev => [...prev, { role: "user", content: text }, { role: "thinking", content: "asking the model" }]);
+    updateActive(c => ({ ...c, messages: [...c.messages, { role: "user", content: text }, { role: "thinking", content: "asking the model" }] }));
     setTimeout(() => {
-      // capture current widgets at fire-time
-      setWidgets(prevWidgets => {
-        const result = routePrompt(text, addressedIds, prevWidgets);
-        setMessages(prev => prev.filter(m => m.role !== "thinking").concat({ role: "ai", content: aiReplyFor(result, prevWidgets) }));
-        if (result.intent === "create") return [...prevWidgets, { ...result.widget, isNew: true }];
-        return prevWidgets;
+      updateActive(c => {
+        const result = routePrompt(text, addressedIds, c.widgets);
+        const messages = c.messages.filter(m => m.role !== "thinking").concat({ role: "ai", content: aiReplyFor(result, c.widgets) });
+        const widgets = result.intent === "create" ? [...c.widgets, { ...result.widget, isNew: true }] : c.widgets;
+        const selected = addressedIds.length > 0 ? [] : c.selected;
+        return { ...c, messages, widgets, selected };
       });
-      // clear selection after a modify/reference
-      if (addressedIds.length > 0) setSelected([]);
     }, 900);
   };
 
-  const clearSelected = () => setSelected([]);
-
-  const reset = () => { setWidgets([]); setMessages([{ role: "system", content: "Connected to Groq · llama-3.3-70b" }]); setSelected([]); };
-
-  const removeWidget = (id) => {
-    setWidgets(prev => prev.filter(w => w.id !== id));
-    setSelected(prev => prev.filter(x => x !== id));
-    setMessages(prev => [...prev, { role: "system", content: "Widget tossed." }]);
-  };
-
-  const addressInChat = (id) => {
-    setSelected([id]);
-  };
+  const removeWidget = (id) => updateActive(c => ({
+    ...c,
+    widgets: c.widgets.filter(w => w.id !== id),
+    selected: c.selected.filter(x => x !== id),
+    messages: [...c.messages, { role: "system", content: "Widget tossed." }],
+  }));
 
   const retagWidget = (id) => {
-    const w = widgets.find(x => x.id === id);
+    const w = active.widgets.find(x => x.id === id);
     const next = window.prompt("New @symbol for this widget", w?.symbol || "");
     if (next == null) return;
     const clean = next.trim().replace(/^@/, "").replace(/\s+/g, "-");
     if (!clean) return;
-    setWidgets(prev => prev.map(w => w.id === id ? { ...w, symbol: clean } : w));
-    setMessages(prev => [...prev, { role: "system", content: `Renamed to @${clean}.` }]);
+    updateActive(c => ({
+      ...c,
+      widgets: c.widgets.map(w => w.id === id ? { ...w, symbol: clean } : w),
+      messages: [...c.messages, { role: "system", content: `Renamed to @${clean}.` }],
+    }));
   };
 
-  return { widgets, selected, messages, select, send, reset, clearSelected, removeWidget, addressInChat, retagWidget };
+  // Canvas-level operations
+  const newCanvas = (name) => {
+    const c = makeCanvas(name || `Canvas ${canvases.length + 1}`);
+    setCanvases(prev => [...prev, c]);
+    setActiveId(c.id);
+  };
+
+  const renameCanvas = (id, name) => setCanvases(prev => prev.map(c => c.id === id ? { ...c, name } : c));
+
+  const deleteCanvas = (id) => {
+    if (canvases.length <= 1) return; // never zero
+    const remaining = canvases.filter(c => c.id !== id);
+    setCanvases(remaining);
+    if (activeId === id) setActiveId(remaining[0].id);
+  };
+
+  const clearChat = () => updateActive(c => ({ ...c, messages: [SYSTEM_HELLO], selected: [] }));
+
+  // Archive current chat into sessions, start a fresh one. Only archives
+  // if there's an actual user message — empty chats don't pollute history.
+  const newSession = () => updateActive(c => {
+    const hasContent = c.messages.some(m => m.role === "user");
+    const archived = hasContent ? [{
+      id: "s-" + Date.now(),
+      name: c.messages.find(m => m.role === "user")?.content?.slice(0, 40) || "Untitled session",
+      endedAt: Date.now(),
+      messages: c.messages,
+      msgCount: c.messages.filter(m => m.role === "user" || m.role === "ai").length,
+    }] : [];
+    return {
+      ...c,
+      messages: [SYSTEM_HELLO, { role: "system", content: `New session — ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` }],
+      selected: [],
+      sessions: [...archived, ...c.sessions],
+    };
+  });
+
+  const restoreSession = (sessionId) => updateActive(c => {
+    const s = c.sessions.find(x => x.id === sessionId);
+    if (!s) return c;
+    // Park the current chat back into sessions first (if it has content),
+    // then load the chosen one.
+    const hasContent = c.messages.some(m => m.role === "user");
+    const parked = hasContent ? [{
+      id: "s-" + Date.now(),
+      name: c.messages.find(m => m.role === "user")?.content?.slice(0, 40) || "Untitled session",
+      endedAt: Date.now(),
+      messages: c.messages,
+      msgCount: c.messages.filter(m => m.role === "user" || m.role === "ai").length,
+    }] : [];
+    return {
+      ...c,
+      messages: s.messages,
+      selected: [],
+      sessions: [...parked, ...c.sessions.filter(x => x.id !== sessionId)],
+    };
+  });
+
+  const deleteSession = (sessionId) => updateActive(c => ({
+    ...c, sessions: c.sessions.filter(x => x.id !== sessionId),
+  }));
+
+  const resetAll = () => { const fresh = makeCanvas("Canvas 1"); setCanvases([fresh]); setActiveId(fresh.id); };
+
+  return {
+    canvases, activeId, active, setActiveId,
+    // active-canvas surface (matches the old useChatCanvas shape)
+    widgets: active.widgets, selected: active.selected, messages: active.messages,
+    sessions: active.sessions,
+    select, send, clearSelected, removeWidget, addressInChat, retagWidget,
+    // canvas-level
+    newCanvas, renameCanvas, deleteCanvas, clearChat, newSession, restoreSession, deleteSession, resetAll,
+  };
 }
 
 /* ---------- Tweaks defaults ---------- */
@@ -109,6 +188,95 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "seedCanvas": true,
   "theme": "dark"
 }/*EDITMODE-END*/;
+
+/* ---------- Canvas tab strip (desktop) ---------- */
+function CanvasTabs({ canvases, activeId, onSwitch, onCreate, onRename, onDelete }) {
+  const [renaming, setRenaming] = React.useState(null);
+  const [draftName, setDraftName] = React.useState("");
+
+  const commit = () => {
+    if (renaming && draftName.trim()) onRename(renaming, draftName.trim());
+    setRenaming(null);
+  };
+
+  return (
+    <div className="canvas-tabs">
+      {canvases.map(c => (
+        <div
+          key={c.id}
+          className={`canvas-tab ${c.id === activeId ? "on" : ""}`}
+          onClick={() => onSwitch(c.id)}
+          onDoubleClick={() => { setRenaming(c.id); setDraftName(c.name); }}
+        >
+          {renaming === c.id ? (
+            <input
+              autoFocus
+              value={draftName}
+              onChange={e => setDraftName(e.target.value)}
+              onBlur={commit}
+              onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") setRenaming(null); }}
+              className="canvas-tab-input"
+            />
+          ) : (
+            <span className="canvas-tab-name">{c.name}</span>
+          )}
+          {canvases.length > 1 && c.id === activeId && (
+            <button
+              className="canvas-tab-close"
+              onClick={e => { e.stopPropagation(); onDelete(c.id); }}
+              title="Delete canvas"
+            ><Icon name="x" size={12} color="var(--fg2)" /></button>
+          )}
+        </div>
+      ))}
+      <button className="canvas-tab-new" onClick={onCreate} title="New canvas">
+        <Icon name="plus" size={14} color="var(--fg2)" />
+      </button>
+    </div>
+  );
+}
+
+/* ---------- iOS canvas dropdown ---------- */
+function IOSCanvasMenu({ canvases, activeId, onSwitch, onCreate }) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    window.addEventListener("mousedown", onClick);
+    return () => window.removeEventListener("mousedown", onClick);
+  }, [open]);
+
+  const active = canvases.find(c => c.id === activeId);
+
+  return (
+    <div style={{ position: "relative" }} ref={ref}>
+      <button
+        className="ios-header-canvas"
+        onClick={() => setOpen(o => !o)}
+      >
+        <span>{active?.name || "Canvas"}</span>
+        <Icon name="chevron-down" size={14} color="var(--fg2)" />
+      </button>
+      {open && (
+        <div className="ios-canvas-popover">
+          {canvases.map(c => (
+            <button key={c.id} className={`ios-canvas-popover-row ${c.id === activeId ? "on" : ""}`} onClick={() => { onSwitch(c.id); setOpen(false); }}>
+              <span>{c.name}</span>
+              {c.id === activeId && <Icon name="check" size={14} color="var(--color-accent)" />}
+            </button>
+          ))}
+          <div className="ios-canvas-popover-sep"></div>
+          <button className="ios-canvas-popover-row" onClick={() => { onCreate(); setOpen(false); }}>
+            <Icon name="plus" size={14} color="var(--color-accent)" />
+            <span style={{ color: "var(--color-accent)" }}>New canvas</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ---------- Desktop side ---------- */
 function DesktopApp({ chat, onOpenSettings }) {
@@ -119,7 +287,7 @@ function DesktopApp({ chat, onOpenSettings }) {
       toolbarRight={
         <>
           <div className="desktop-rail">
-            <span className="crumb">Canvas</span>
+            <span className="crumb">{chat.active.name}</span>
             <span>· {chat.widgets.length} widget{chat.widgets.length === 1 ? "" : "s"}</span>
             {chat.selected.length > 0 ? <span style={{ color: "var(--color-accent)" }}>· {chat.selected.length} selected</span> : null}
           </div>
@@ -132,6 +300,14 @@ function DesktopApp({ chat, onOpenSettings }) {
         </>
       }
     >
+      <CanvasTabs
+        canvases={chat.canvases}
+        activeId={chat.activeId}
+        onSwitch={chat.setActiveId}
+        onCreate={() => chat.newCanvas()}
+        onRename={chat.renameCanvas}
+        onDelete={chat.deleteCanvas}
+      />
       <Canvas widgets={chat.widgets} selected={chat.selected} onSelect={chat.select} onDelete={chat.removeWidget} onAddressInChat={chat.addressInChat} onRetag={chat.retagWidget} />
       <ChatDock
         messages={chat.messages}
@@ -141,6 +317,12 @@ function DesktopApp({ chat, onOpenSettings }) {
         addressed={chat.selected}
         widgets={chat.widgets}
         onClearAddressed={chat.clearSelected}
+        onClearChat={chat.clearChat}
+        onNewSession={chat.newSession}
+        sessions={chat.sessions}
+        onRestoreSession={chat.restoreSession}
+        onDeleteSession={chat.deleteSession}
+        contextLabel={chat.active.name}
       />
     </DesktopFrame>
   );
@@ -151,9 +333,13 @@ function IOSApp({ chat, onOpenSettings }) {
   const [dockOpen, setDockOpen] = React.useState(false);
   return (
     <IPhoneFrame>
-      {/* iOS-style header bar with title + settings gear */}
       <div className="ios-header">
-        <div className="ios-header-ttl">Canvas</div>
+        <IOSCanvasMenu
+          canvases={chat.canvases}
+          activeId={chat.activeId}
+          onSwitch={chat.setActiveId}
+          onCreate={() => chat.newCanvas()}
+        />
         <button className="btn btn-icon ios-header-gear" onClick={onOpenSettings} title="Settings">
           <Icon name="settings" size={18} color="var(--fg1)" />
         </button>
@@ -168,6 +354,12 @@ function IOSApp({ chat, onOpenSettings }) {
           addressed={chat.selected}
           widgets={chat.widgets}
           onClearAddressed={chat.clearSelected}
+          onClearChat={chat.clearChat}
+          onNewSession={chat.newSession}
+          sessions={chat.sessions}
+          onRestoreSession={chat.restoreSession}
+          onDeleteSession={chat.deleteSession}
+          contextLabel={chat.active.name}
         />
       </div>
     </IPhoneFrame>
@@ -186,36 +378,19 @@ function IOSAppWithSettings({ chat, settingsOpen, onOpenSettings, onCloseSetting
   return <IOSApp chat={chat} onOpenSettings={onOpenSettings} />;
 }
 
-function IOSSettings() {
-  return (
-    <div style={{ padding: 16, overflowY: "auto" }}>
-      <div style={{ fontSize: 28, fontWeight: 700, color: "var(--fg1)", marginBottom: 16, letterSpacing: "-0.02em" }}>Settings</div>
-      <div className="list" style={{ marginBottom: 14 }}>
-        <ListRow icon={<Icon name="cpu" size={16} color="white" />} iconBg="var(--color-accent)" title="Brains" sub="Groq · active" />
-        <ListRow icon={<Icon name="network" size={16} color="white" />} iconBg="var(--color-teal)" title="Senses" sub="Local embeddings" />
-        <ListRow icon={<Icon name="puzzle" size={16} color="white" />} iconBg="var(--color-purple)" title="Powers" sub="3 of 6 on" />
-        <ListRow icon={<Icon name="file-text" size={16} color="white" />} iconBg="var(--fg2)" title="Diaries" sub="Logs · 1.2 MB" />
-      </div>
-    </div>
-  );
-}
-
 /* ---------- Root ---------- */
 function App() {
   const [tw, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const seedWidgets = tw.seedCanvas ? [SEED_WEATHER, SEED_STOCK, SEED_CALENDAR] : [];
-  // share state across both frames so they animate together
-  const chat = useChatCanvas(seedWidgets);
+  const chat = useCanvases(seedWidgets);
 
   const [showOnboarding, setShowOnboarding] = React.useState(tw.showOnboarding);
   React.useEffect(() => { setShowOnboarding(tw.showOnboarding); }, [tw.showOnboarding]);
 
-  // theme — apply data-theme to <html> so the CSS vars switch
   React.useEffect(() => {
     document.documentElement.setAttribute("data-theme", tw.theme || "dark");
   }, [tw.theme]);
 
-  // settings: 'desktop' (full sheet) | 'ios' (mounted inside iPhone) | null
   const [settingsOpen, setSettingsOpen] = React.useState(null);
 
   return (
@@ -246,7 +421,6 @@ function App() {
             </div>
             <Onboarding onFinish={({ sample }) => {
               setShowOnboarding(false); setTweak("showOnboarding", false);
-              // if user picked a sample, drop it on the canvas
               if (sample === "weather")  chat.send("Weather in Brooklyn", []);
               if (sample === "stock")    chat.send("AAPL stock chart", []);
               if (sample === "calendar") chat.send("Today's agenda", []);
@@ -266,9 +440,10 @@ function App() {
         <TweakSection label="Demo state">
           <TweakToggle label="Show onboarding overlay" value={tw.showOnboarding} onChange={(v) => setTweak("showOnboarding", v)} />
           <TweakToggle label="Seed canvas with widgets" value={tw.seedCanvas}    onChange={(v) => setTweak("seedCanvas", v)} />
-          <TweakButton onClick={chat.reset} label="Reset canvas + chat" />
+          <TweakButton onClick={chat.resetAll} label="Reset everything" />
         </TweakSection>
         <TweakSection label="Try it">
+          <TweakButton onClick={() => chat.newCanvas("Trading")} label="New canvas (Trading)" />
           <TweakButton onClick={() => chat.send("@market what's the trend?", [])} label="Send @market mention" />
           <TweakButton onClick={() => chat.send("Add a weather widget for Tokyo", [])} label="Create another widget" />
         </TweakSection>
@@ -279,6 +454,5 @@ function App() {
 
 window.App = App;
 
-/* Mount */
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(<App />);

@@ -8,6 +8,24 @@ _Nothing yet — next change lands here._
 
 ---
 
+## [0.4.1] — 2026-05-22
+
+Patch on 0.4.0 — workspace + session ergonomics.
+
+### Added
+- **Multiple canvases.** Every canvas has its own widgets and chat history. Switching canvases swaps both simultaneously. Desktop shows a **canvas tab strip** under the toolbar (click to switch, double-click to rename, × on active tab to delete — minimum one canvas always survives, `+` to create). iOS shows a **dropdown title** in the header — tap the canvas name to see the list with `✓` next to the active one and a `+ New canvas` action.
+- **Dock `⋯` menu** — **New session** (accent, with `⌘⏎` hint), **Clear chat** (with msg count), **Export transcript** (stub), **Session history** (with count badge).
+- **New session** — archives the current chat into history (only if it has content) and starts a fresh thread with a `New session — HH:MM` system marker.
+- **Session history sheet** — slides up inside the dock with one row per archived session (first user message as the name, relative timestamp, msg count). Click to restore (current chat is parked into history first so nothing is lost). Trash per row deletes a session.
+- **Reset everything** Tweak button (replaces "Reset canvas + chat") drops all canvases back to one empty.
+- **New canvas Tweak** button to make the multi-canvas behaviour discoverable.
+
+### Reworked
+- `useChatCanvas` → `useCanvases` — same active-canvas surface plus canvas-level ops (`newCanvas`, `renameCanvas`, `deleteCanvas`, `setActiveId`, `clearChat`, `newSession`, `restoreSession`, `deleteSession`, `resetAll`).
+- Dock header layout — title and chevron preserved, `⋯` slotted between them, only the icon + title trigger collapse so the menu button doesn't accidentally toggle. Header now shows the active canvas name as context (`Chat · Trading · addressing 2`).
+
+---
+
 ## [0.4.0] — 2026-05-22
 
 The "Claude Code + AI-authored extensions" release.
