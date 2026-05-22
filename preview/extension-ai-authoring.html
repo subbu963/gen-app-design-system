@@ -1,0 +1,251 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="../tailwind.js"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  body { margin: 0; background: var(--bg-base); font-family: var(--font-sans); }
+  /* code lines */
+  .code-line { display: flex; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.55; }
+  .ln { color: var(--fg3); text-align: right; padding: 0 12px 0 8px; user-select: none; min-width: 36px; }
+  .code-content { flex: 1; padding-right: 12px; white-space: pre; color: var(--fg1); }
+  .tok-kw   { color: #FF7AB6; }
+  .tok-fn   { color: #5AC8FA; }
+  .tok-str  { color: var(--color-green); }
+  .tok-num  { color: var(--color-orange); }
+  .tok-prop { color: var(--color-yellow); }
+  .tok-cmt  { color: var(--fg3); font-style: italic; }
+  .tok-var  { color: var(--fg1); }
+  /* diff inside chat card */
+  .diff-line { display: flex; font-family: var(--font-mono); font-size: 11.5px; line-height: 1.5; padding: 0 8px; }
+  .diff-line .gut { width: 14px; color: var(--fg3); text-align: center; flex-shrink: 0; }
+  .diff-line .body { flex: 1; white-space: pre-wrap; word-break: break-all; }
+  .diff-add { background: rgba(48,209,88,0.10); }
+  .diff-add .gut { color: var(--color-green); }
+  .diff-del { background: rgba(255,69,58,0.10); }
+  .diff-del .gut { color: var(--color-red); }
+  .diff-del .body { text-decoration: line-through; opacity: 0.65; }
+  /* chat messages */
+  .msg { max-width: 92%; padding: 8px 12px; border-radius: 14px; font-size: 13px; line-height: 1.4; }
+  .msg.user { background: var(--color-accent); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .msg.ai   { background: rgba(255,255,255,0.07); color: var(--fg1); align-self: flex-start; border-bottom-left-radius: 4px; max-width: 100%; }
+  .msg.system { align-self: center; color: var(--fg3); font-size: 11px; font-style: italic; padding: 2px; }
+  .slash-hint { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+</style>
+</head>
+<body class="p-5 min-h-screen flex flex-col gap-3">
+
+  <!-- Header -->
+  <div class="flex items-center gap-2 text-xs text-fg2">
+    <span class="cursor-pointer">Settings</span>
+    <span class="text-fg4">›</span>
+    <span class="cursor-pointer">Extensions</span>
+    <span class="text-fg4">›</span>
+    <span class="text-fg1 font-semibold font-mono">open-meteo.js</span>
+    <span class="text-fg4 ml-2">·</span>
+    <span class="inline-flex items-center gap-1 text-accent text-[11px] font-medium">
+      <i data-lucide="sparkles" class="w-3 h-3"></i>
+      AI is editing
+    </span>
+  </div>
+
+  <div class="bg-card rounded-lg p-3 flex items-center gap-3">
+    <div class="w-9 h-9 rounded-md bg-card-elevated flex items-center justify-center"><i data-lucide="puzzle" class="w-5 h-5 text-fg2"></i></div>
+    <div class="flex-1">
+      <div class="text-fg1 font-semibold text-base -tracking-[0.012em]">Open-Meteo</div>
+      <div class="text-fg2 text-xs">Weather forecasts · 16-day · v1.2.0</div>
+    </div>
+    <button class="font-sans text-xs font-semibold py-1.5 px-3 rounded-full cursor-pointer border-none flex items-center gap-1.5"
+            style="background:transparent;color:var(--fg2);border:1px solid var(--stroke-soft)">
+      <i data-lucide="play" class="w-3.5 h-3.5"></i>Test
+    </button>
+    <button class="font-sans text-xs font-semibold py-1.5 px-3 rounded-full cursor-pointer border-none flex items-center gap-1.5 bg-accent text-white">
+      <i data-lucide="check" class="w-3.5 h-3.5"></i>Save
+    </button>
+  </div>
+
+  <!-- Editor + chat side by side -->
+  <div class="grid grid-cols-[1fr_400px] gap-3 flex-1 min-h-[640px]">
+
+    <!-- Code editor with inline AI fix-it -->
+    <div class="bg-card rounded-lg flex flex-col overflow-hidden">
+      <div class="px-3 py-2 border-b border-hairline flex items-center gap-2">
+        <span class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold">Source</span>
+        <span class="text-[11px] text-fg2 font-mono">open-meteo.js · 47 lines</span>
+        <div class="ml-auto flex items-center gap-1 text-fg2">
+          <button class="p-1 hover:bg-white/[0.04] rounded"><i data-lucide="undo-2" class="w-4 h-4"></i></button>
+          <button class="p-1 hover:bg-white/[0.04] rounded"><i data-lucide="redo-2" class="w-4 h-4"></i></button>
+          <button class="p-1 hover:bg-white/[0.04] rounded"><i data-lucide="search" class="w-4 h-4"></i></button>
+        </div>
+      </div>
+
+      <div class="flex-1 overflow-y-auto bg-base py-2 relative">
+        <div class="code-line"><span class="ln">1</span><span class="code-content"><span class="tok-cmt">// Open-Meteo extension — feeds the @weather widget</span></span></div>
+        <div class="code-line"><span class="ln">2</span><span class="code-content"><span class="tok-kw">export const</span> manifest = {</span></div>
+        <div class="code-line"><span class="ln">3</span><span class="code-content">  <span class="tok-prop">id</span>: <span class="tok-str">"open-meteo"</span>,</span></div>
+        <div class="code-line"><span class="ln">4</span><span class="code-content">  <span class="tok-prop">version</span>: <span class="tok-str">"1.2.0"</span>,</span></div>
+        <div class="code-line"><span class="ln">5</span><span class="code-content">  <span class="tok-prop">refresh</span>: <span class="tok-num">60</span>,</span></div>
+        <div class="code-line"><span class="ln">6</span><span class="code-content">};</span></div>
+        <div class="code-line"><span class="ln">7</span><span class="code-content"></span></div>
+        <div class="code-line"><span class="ln">8</span><span class="code-content"><span class="tok-kw">export async function</span> <span class="tok-fn">run</span>(ctx) {</span></div>
+        <div class="code-line"><span class="ln">9</span><span class="code-content">  <span class="tok-kw">const</span> lat = ctx.widget?.props?.lat ?? <span class="tok-num">40.6782</span>;</span></div>
+        <div class="code-line"><span class="ln">10</span><span class="code-content">  <span class="tok-kw">const</span> lon = ctx.widget?.props?.lon ?? <span class="tok-num">-73.9442</span>;</span></div>
+
+        <!-- ERROR LINE WITH FIX-WITH-AI AFFORDANCE -->
+        <div class="code-line group" style="background:rgba(255,69,58,0.08);border-left:2px solid var(--color-red)">
+          <span class="ln" style="color:var(--color-red)">11</span>
+          <span class="code-content"><span class="tok-kw">const</span> url = <span class="tok-kw">new</span> <span class="tok-fn">URL</span>(<span class="tok-str">"https://api.openmeteo.com/v1/forecast"</span>);</span>
+        </div>
+        <div class="px-12 py-1.5 flex items-center gap-2 bg-tint-red/30" style="background:rgba(255,69,58,0.05)">
+          <i data-lucide="alert-circle" class="w-3.5 h-3.5 text-red shrink-0"></i>
+          <span class="text-[11px] text-fg1 flex-1">Wrong domain — should be <code class="code">api.open-meteo.com</code> (with hyphen).</span>
+          <button class="font-sans text-[10px] font-semibold py-1 px-2 rounded-full cursor-pointer border-none flex items-center gap-1 bg-accent text-white">
+            <i data-lucide="sparkles" class="w-3 h-3"></i>Fix with AI
+          </button>
+        </div>
+
+        <div class="code-line"><span class="ln">12</span><span class="code-content">  url.searchParams.<span class="tok-fn">set</span>(<span class="tok-str">"latitude"</span>, lat);</span></div>
+        <div class="code-line"><span class="ln">13</span><span class="code-content">  url.searchParams.<span class="tok-fn">set</span>(<span class="tok-str">"longitude"</span>, lon);</span></div>
+        <div class="code-line"><span class="ln">14</span><span class="code-content">  url.searchParams.<span class="tok-fn">set</span>(<span class="tok-str">"current"</span>, <span class="tok-str">"temperature_2m"</span>);</span></div>
+
+        <!-- HIGHLIGHTED RANGE - AI is proposing to change this -->
+        <div class="code-line" style="background:rgba(10,132,255,0.08);border-left:2px solid var(--color-accent)">
+          <span class="ln" style="color:var(--color-accent)">15</span>
+          <span class="code-content">  url.searchParams.<span class="tok-fn">set</span>(<span class="tok-str">"temperature_unit"</span>, <span class="tok-str">"fahrenheit"</span>);</span>
+        </div>
+        <div class="px-12 py-1 flex items-center gap-2" style="background:rgba(10,132,255,0.05)">
+          <i data-lucide="message-circle" class="w-3 h-3 text-accent shrink-0"></i>
+          <span class="text-[10px] text-accent">AI is proposing a change here → see chat</span>
+        </div>
+
+        <div class="code-line"><span class="ln">16</span><span class="code-content"></span></div>
+        <div class="code-line"><span class="ln">17</span><span class="code-content">  <span class="tok-kw">const</span> res = <span class="tok-kw">await</span> ctx.<span class="tok-fn">fetch</span>(url);</span></div>
+        <div class="code-line"><span class="ln">18</span><span class="code-content">  <span class="tok-kw">if</span> (!res.ok) <span class="tok-kw">return</span> ctx.<span class="tok-fn">emit</span>({ <span class="tok-prop">status</span>: <span class="tok-str">"error"</span> });</span></div>
+        <div class="code-line"><span class="ln">19</span><span class="code-content"></span></div>
+        <div class="code-line"><span class="ln">20</span><span class="code-content">  <span class="tok-kw">const</span> data = <span class="tok-kw">await</span> res.<span class="tok-fn">json</span>();</span></div>
+        <div class="code-line"><span class="ln">21</span><span class="code-content">  ctx.<span class="tok-fn">emit</span>({</span></div>
+        <div class="code-line"><span class="ln">22</span><span class="code-content">    <span class="tok-prop">status</span>: <span class="tok-str">"live"</span>,</span></div>
+        <div class="code-line"><span class="ln">23</span><span class="code-content">    <span class="tok-prop">temp</span>: <span class="tok-fn">Math</span>.<span class="tok-fn">round</span>(data.current.temperature_2m),</span></div>
+        <div class="code-line"><span class="ln">24</span><span class="code-content">  });</span></div>
+        <div class="code-line"><span class="ln">25</span><span class="code-content">}</span></div>
+      </div>
+
+      <!-- Status bar -->
+      <div class="px-3 py-1.5 border-t border-hairline flex items-center justify-between text-[11px] text-fg2 font-mono">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-orange"></span>JavaScript</span>
+          <span class="text-red">1 issue</span>
+          <span class="text-accent">1 proposed change</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span>Ln 15, Col 1</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat panel scoped to file -->
+    <div class="bg-card rounded-lg flex flex-col overflow-hidden min-h-0">
+      <!-- Addressing strip - scoped chat -->
+      <div class="px-3.5 py-2.5 border-b border-hairline flex items-center gap-2"
+           style="background:rgba(10,132,255,0.06)">
+        <div class="w-6 h-6 rounded-md bg-accent flex items-center justify-center"><i data-lucide="sparkles" class="w-3.5 h-3.5 text-white"></i></div>
+        <div class="flex-1 min-w-0">
+          <div class="text-xs text-fg1 font-semibold leading-tight">Editing extension</div>
+          <div class="text-[11px] text-fg2 font-mono">open-meteo.js · 14 turns</div>
+        </div>
+        <button class="p-1 hover:bg-white/[0.04] rounded text-fg2"><i data-lucide="history" class="w-4 h-4"></i></button>
+        <button class="p-1 hover:bg-white/[0.04] rounded text-fg2"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <!-- Messages -->
+      <div class="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-2.5 min-h-0">
+
+        <div class="msg system">claude-sonnet-4.5 · context: open-meteo.js + manifest schema</div>
+
+        <div class="msg user">Add support for celsius too. Make it a per-widget prop, default fahrenheit.</div>
+
+        <div class="msg ai">
+          <div class="leading-snug">I'll add a <code class="code">unit</code> prop that accepts <code class="code">"f"</code> or <code class="code">"c"</code>, with fahrenheit as the default. It maps to Open-Meteo's <code class="code">temperature_unit</code> param. The <code class="code">UNIT</code> secret stays as the global fallback.</div>
+        </div>
+
+        <!-- Proposed change card -->
+        <div class="msg ai" style="padding:0;background:transparent">
+          <div class="rounded-lg overflow-hidden border border-soft" style="background:var(--bg-base)">
+            <div class="px-3 py-2 flex items-center gap-2 border-b border-hairline" style="background:rgba(10,132,255,0.05)">
+              <i data-lucide="file-diff" class="w-3.5 h-3.5 text-accent"></i>
+              <div class="text-xs text-fg1 font-semibold">Proposed change · 1 hunk · +3 −1</div>
+              <span class="ml-auto text-[10px] text-fg2 font-mono">open-meteo.js</span>
+            </div>
+            <div class="py-1">
+              <div class="diff-line"><span class="gut">14</span><span class="body">  url.searchParams.set("current", "temperature_2m");</span></div>
+              <div class="diff-line diff-del"><span class="gut">−</span><span class="body">  url.searchParams.set("temperature_unit", "fahrenheit");</span></div>
+              <div class="diff-line diff-add"><span class="gut">+</span><span class="body">  const unit = ctx.widget?.props?.unit ?? ctx.secrets.UNIT ?? "f";</span></div>
+              <div class="diff-line diff-add"><span class="gut">+</span><span class="body">  url.searchParams.set("temperature_unit",</span></div>
+              <div class="diff-line diff-add"><span class="gut">+</span><span class="body">    unit === "c" ? "celsius" : "fahrenheit");</span></div>
+              <div class="diff-line"><span class="gut">16</span><span class="body"></span></div>
+              <div class="diff-line"><span class="gut">17</span><span class="body">  const res = await ctx.fetch(url);</span></div>
+            </div>
+            <div class="px-3 py-2 flex items-center gap-2 border-t border-hairline">
+              <button class="font-sans text-xs font-semibold py-1.5 px-3 rounded-full cursor-pointer border-none flex items-center gap-1.5"
+                      style="background:transparent;color:var(--fg2)">
+                <i data-lucide="play" class="w-3.5 h-3.5"></i>Test first
+              </button>
+              <button class="font-sans text-xs font-semibold py-1.5 px-3 rounded-full cursor-pointer border-none"
+                      style="background:transparent;color:var(--fg2)">Reject</button>
+              <button class="ml-auto font-sans text-xs font-semibold py-1.5 px-3 rounded-full cursor-pointer border-none flex items-center gap-1.5 bg-accent text-white">
+                <i data-lucide="check" class="w-3.5 h-3.5"></i>Apply
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="msg user">Test it first with Brooklyn and celsius.</div>
+
+        <!-- AI thinking + test output -->
+        <div class="msg ai">
+          <div class="flex items-center gap-2 text-fg2 text-xs mb-1.5">
+            <span class="inline-flex w-1.5 h-1.5 rounded-full bg-accent" style="animation:tdots 1.2s infinite"></span>
+            Running in sandbox …
+          </div>
+          <div class="rounded-md p-2.5 font-mono text-[11px] leading-relaxed border border-soft" style="background:var(--bg-base)">
+<span class="text-fg3">// fetch:</span> <span class="tok-fn">GET</span> api.open-meteo.com/v1/forecast?lat=40.68&lon=-73.94&temperature_unit=celsius
+<span class="text-fg3">// 200 OK · 88 ms</span>
+
+<span class="tok-fn">emit</span>(<span class="text-fg3">{</span>
+  <span class="tok-prop">status</span>: <span class="tok-str">"live"</span>,
+  <span class="tok-prop">temp</span>: <span class="tok-num">20</span>,           <span class="text-fg3">// 20°C (68°F)</span>
+<span class="text-fg3">}</span>)
+          </div>
+          <div class="flex items-center gap-1.5 text-[11px] text-green mt-2 font-medium">
+            <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+            Output matches schema. Safe to apply.
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Composer with slash command hints -->
+      <div class="px-2 py-2 border-t border-hairline">
+        <div class="flex items-center gap-1 px-2 pb-1 flex-wrap">
+          <span class="slash-hint">/explain</span>
+          <span class="slash-hint">/refactor</span>
+          <span class="slash-hint">/test</span>
+          <span class="slash-hint">/fix</span>
+          <span class="slash-hint">/schema</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <input placeholder="Ask the model to change the extension…"
+                 class="flex-1 bg-white/[0.06] border-none outline-none text-fg1 text-sm py-2 px-3 rounded-full font-sans" />
+          <button class="w-8 h-8 rounded-full bg-accent text-white border-none cursor-pointer flex items-center justify-center">
+            <i data-lucide="arrow-up" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+  </script>
+
+</body></html>

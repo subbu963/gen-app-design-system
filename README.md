@@ -1,6 +1,6 @@
 # gen-app Design System
 
-**Current version: `0.3.0`** · [Changelog](CHANGELOG.md)
+**Current version: `0.4.0`** · [Changelog](CHANGELOG.md)
 
 A design system for **gen-app** — a Tauri v2 desktop + iOS app where you chat with an LLM and it builds live, self-updating widgets on a canvas. The system codifies an iOS-first, dark-only aesthetic that scales gracefully into a resizable macOS window.
 

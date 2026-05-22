@@ -3,10 +3,11 @@
    Desktop: split sheet (sidebar + detail), iOS: nav stack with back. */
 
 const PROVIDERS_LIST = [
-  { id: "groq",       name: "Groq",       sub: "llama-3.3-70b · 0.4s avg", bg: "#FF9F0A", glyph: "G",  status: "active",   keyHint: "gsk_•••••12c4" },
-  { id: "openrouter", name: "OpenRouter", sub: "Any model · pay-per-use",  bg: "#5E5CE6", glyph: "OR", status: "ready",    keyHint: "sk-or-•••••a9b2" },
-  { id: "openai",     name: "OpenAI",     sub: "gpt-4o · official",        bg: "#10A37F", glyph: "AI", status: "ready",    keyHint: "sk-proj-•••••ff43" },
-  { id: "ollama",     name: "Ollama",     sub: "Local · port 11434",       bg: "#30D158", glyph: "●",  status: "offline",  keyHint: null },
+  { id: "claude-code", name: "Claude Code", sub: "sonnet · local CLI",       bg: "#D97757", glyph: "CC", status: "active",   keyHint: null, isCli: true },
+  { id: "groq",        name: "Groq",        sub: "llama-3.3-70b · 0.4s avg", bg: "#FF9F0A", glyph: "G",  status: "ready",    keyHint: "gsk_•••••12c4" },
+  { id: "openrouter",  name: "OpenRouter",  sub: "Any model · pay-per-use",  bg: "#5E5CE6", glyph: "OR", status: "ready",    keyHint: "sk-or-•••••a9b2" },
+  { id: "openai",      name: "OpenAI",      sub: "gpt-4o · official",        bg: "#10A37F", glyph: "AI", status: "ready",    keyHint: "sk-proj-•••••ff43" },
+  { id: "ollama",      name: "Ollama",      sub: "Local · port 11434",       bg: "#30D158", glyph: "●",  status: "offline",  keyHint: null },
 ];
 
 const EXTENSIONS_LIST = [
@@ -31,8 +32,9 @@ const LOGS_SEED = [
 
 /* ---------- Providers panel ---------- */
 function ProvidersPanel() {
-  const [active, setActive] = React.useState("groq");
-  const [selected, setSelected] = React.useState("groq");
+  const [active, setActive] = React.useState("claude-code");
+  const [selected, setSelected] = React.useState("claude-code");
+  const [budget, setBudget] = React.useState(20);
   const p = PROVIDERS_LIST.find(x => x.id === selected) || PROVIDERS_LIST[0];
 
   return (
@@ -84,6 +86,22 @@ function ProvidersPanel() {
               </div>
             </div>
           )}
+          {p.isCli && (
+            <div className="list-row">
+              <div className="row-ic" style={{ background: "var(--bg-card-elevated)" }}>
+                <Icon name="terminal" size={14} color="var(--color-green)" />
+              </div>
+              <div className="row-body">
+                <div className="row-title" style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>claude</div>
+                <div className="row-sub">v1.2.4 · authenticated as <span style={{ color: "var(--fg1)" }}>you@anthropic</span></div>
+              </div>
+              <div className="row-right">
+                <span className="symbol-chip" style={{ background: "var(--tint-green)", color: "var(--color-green)", borderColor: "transparent" }}>
+                  <span style={{ width: 5, height: 5, borderRadius: 999, background: "var(--color-green)", marginRight: 4 }}></span>installed
+                </span>
+              </div>
+            </div>
+          )}
           <div className="list-row">
             <div className="row-ic" style={{ background: "var(--bg-card-elevated)" }}>
               <Icon name="cpu" size={14} color="var(--fg2)" />
@@ -95,12 +113,43 @@ function ProvidersPanel() {
             <div className="row-right"><Icon name="chevron-right" size={16} color="var(--fg3)" /></div>
           </div>
         </div>
+        {p.isCli && (
+          <Button variant="secondary" size="sm" icon="terminal" style={{ marginTop: 10, alignSelf: "flex-start" }}>
+            Check CLI
+          </Button>
+        )}
         {p.id !== active && p.status !== "offline" && (
           <Button variant="primary" size="md" style={{ marginTop: 12 }} onClick={() => setActive(p.id)}>
             Make {p.name} active
           </Button>
         )}
       </div>
+
+      {p.isCli && (
+        <div className="settings-section">
+          <div className="settings-section-label">Request budget</div>
+          <div className="list">
+            <div className="list-row">
+              <div className="row-ic" style={{ background: "var(--bg-card-elevated)" }}>
+                <Icon name="wallet" size={14} color="var(--color-yellow)" />
+              </div>
+              <div className="row-body">
+                <div className="row-title">Daily ceiling</div>
+                <div className="row-sub">Stops Claude Code from racking up surprise tokens</div>
+              </div>
+              <div className="row-right" style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--fg1)" }}>${budget}.00</div>
+            </div>
+            <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, borderTop: "1px solid var(--stroke-hairline)" }}>
+              <input type="range" min="1" max="100" value={budget} onChange={e => setBudget(+e.target.value)}
+                style={{ flex: 1, accentColor: "var(--color-accent)" }} />
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg2)", minWidth: 60, textAlign: "right" }}>$1 — $100</span>
+            </div>
+          </div>
+          <div className="footnote" style={{ marginTop: 8 }}>
+            Used <span style={{ color: "var(--fg1)", fontFamily: "var(--font-mono)" }}>$3.24</span> today · resets at midnight local time.
+          </div>
+        </div>
+      )}
     </div>
   );
 }

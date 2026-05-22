@@ -8,6 +8,16 @@ _Nothing yet — next change lands here._
 
 ---
 
+## [0.4.0] — 2026-05-22
+
+The "Claude Code + AI-authored extensions" release.
+
+### Added
+- **Claude Code as a provider.** No API key — uses the locally-installed `claude` CLI via terminal bridge. Shows CLI version + authenticated-user instead of a masked key, with a `Check CLI` button. New **Request budget** sub-section (daily $ ceiling slider, used-today counter) since Claude Code bills by actual usage. Added as the new active default. Onboarding step adapts copy + skips the API-key field for CLI providers.
+- **Extension AI authoring flow** (preview). Chat dock scoped to the open file, AI emits structured "Proposed change" cards with mini diffs + Test / Apply / Reject buttons. Slash commands (`/explain` `/refactor` `/test` `/fix` `/schema`), inline `Fix with AI` action on lint errors, per-file conversation history.
+
+---
+
 ## [0.3.0] — 2026-05-22
 
 The "make it real" release. Tailwind, themes, extension authoring, and the chat dock graduates from a strip to a chat head.
