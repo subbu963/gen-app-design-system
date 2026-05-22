@@ -207,6 +207,7 @@ function CanvasTabs({ canvases, activeId, onSwitch, onCreate, onRename, onDelete
           className={`canvas-tab ${c.id === activeId ? "on" : ""}`}
           onClick={() => onSwitch(c.id)}
           onDoubleClick={() => { setRenaming(c.id); setDraftName(c.name); }}
+          title={c.id === activeId ? "Double-click to rename" : c.name}
         >
           {renaming === c.id ? (
             <input
@@ -237,7 +238,7 @@ function CanvasTabs({ canvases, activeId, onSwitch, onCreate, onRename, onDelete
 }
 
 /* ---------- iOS canvas dropdown ---------- */
-function IOSCanvasMenu({ canvases, activeId, onSwitch, onCreate }) {
+function IOSCanvasMenu({ canvases, activeId, onSwitch, onCreate, onRename, onDelete }) {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef(null);
 
@@ -250,6 +251,20 @@ function IOSCanvasMenu({ canvases, activeId, onSwitch, onCreate }) {
 
   const active = canvases.find(c => c.id === activeId);
 
+  const handleRename = () => {
+    setOpen(false);
+    const next = window.prompt("Rename canvas", active?.name || "");
+    if (next == null) return;
+    const clean = next.trim();
+    if (clean && clean !== active?.name) onRename(activeId, clean);
+  };
+
+  const handleDelete = () => {
+    setOpen(false);
+    if (canvases.length <= 1) return;
+    if (window.confirm(`Delete "${active?.name}"? Its widgets and chat will be lost.`)) onDelete(activeId);
+  };
+
   return (
     <div style={{ position: "relative" }} ref={ref}>
       <button
@@ -261,6 +276,7 @@ function IOSCanvasMenu({ canvases, activeId, onSwitch, onCreate }) {
       </button>
       {open && (
         <div className="ios-canvas-popover">
+          <div style={{ fontSize: 10, color: "var(--fg3)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600, padding: "4px 10px 2px" }}>Switch</div>
           {canvases.map(c => (
             <button key={c.id} className={`ios-canvas-popover-row ${c.id === activeId ? "on" : ""}`} onClick={() => { onSwitch(c.id); setOpen(false); }}>
               <span>{c.name}</span>
@@ -268,10 +284,20 @@ function IOSCanvasMenu({ canvases, activeId, onSwitch, onCreate }) {
             </button>
           ))}
           <div className="ios-canvas-popover-sep"></div>
+          <button className="ios-canvas-popover-row" onClick={handleRename}>
+            <Icon name="pencil" size={14} color="var(--fg2)" />
+            <span>Rename "{active?.name}"</span>
+          </button>
           <button className="ios-canvas-popover-row" onClick={() => { onCreate(); setOpen(false); }}>
             <Icon name="plus" size={14} color="var(--color-accent)" />
             <span style={{ color: "var(--color-accent)" }}>New canvas</span>
           </button>
+          {canvases.length > 1 && (
+            <button className="ios-canvas-popover-row" onClick={handleDelete}>
+              <Icon name="trash-2" size={14} color="var(--color-red)" />
+              <span style={{ color: "var(--color-red)" }}>Delete "{active?.name}"</span>
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -339,6 +365,8 @@ function IOSApp({ chat, onOpenSettings }) {
           activeId={chat.activeId}
           onSwitch={chat.setActiveId}
           onCreate={() => chat.newCanvas()}
+          onRename={chat.renameCanvas}
+          onDelete={chat.deleteCanvas}
         />
         <button className="btn btn-icon ios-header-gear" onClick={onOpenSettings} title="Settings">
           <Icon name="settings" size={18} color="var(--fg1)" />

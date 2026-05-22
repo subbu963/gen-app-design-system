@@ -256,6 +256,77 @@ body { margin: 0; background: #0a0a0c; }
   box-shadow: var(--elev-3);
   animation: widget-menu-in 160ms var(--ease-emphasized);
 }
+
+/* Widget source sheet */
+.widget-source-overlay {
+  position: fixed; inset: 0; z-index: 250;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 32px;
+}
+.widget-source-sheet {
+  width: 720px; max-width: 100%;
+  max-height: min(620px, 90vh);
+  background: var(--bg-window);
+  border: 1px solid var(--stroke-soft);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--elev-4);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  animation: widget-menu-in 200ms var(--ease-emphasized);
+}
+.widget-source-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--stroke-hairline);
+}
+.widget-source-tabs {
+  display: flex; align-items: center; gap: 2px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--stroke-hairline);
+  background: var(--bg-base);
+}
+.widget-source-tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px; border-radius: 6px;
+  background: transparent; border: none; cursor: pointer;
+  font: inherit; font-size: 11px; font-weight: 500;
+  color: var(--fg2);
+}
+.widget-source-tab:hover { background: var(--bg-hover); color: var(--fg1); }
+.widget-source-tab.on {
+  background: var(--bg-card-elevated); color: var(--color-accent);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.widget-source-code {
+  flex: 1; min-height: 0;
+  margin: 0; padding: 14px 18px;
+  background: var(--bg-base);
+  font-family: var(--font-mono); font-size: 12.5px;
+  line-height: 1.55; color: var(--fg1);
+  overflow: auto;
+  white-space: pre;
+  tab-size: 2;
+}
+.widget-source-foot {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--stroke-hairline);
+  background: var(--bg-window);
+}
+
+/* Extension list rows inside the View Source sheet */
+.widget-ext-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px;
+  background: var(--bg-card); border: 1px solid var(--stroke-soft);
+  border-radius: 8px;
+  cursor: pointer; transition: background 120ms;
+  font: inherit;
+}
+.widget-ext-row:hover { background: var(--bg-card-elevated); }
+.widget-ext-row.on { background: var(--bg-card-elevated); border-color: var(--color-accent); }
 @keyframes widget-menu-in { from { opacity: 0; transform: translateY(-4px) scale(0.97); } to { opacity: 1; transform: none; } }
 .widget-menu-row {
   display: flex; align-items: center; gap: 10px;

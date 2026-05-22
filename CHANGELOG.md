@@ -8,6 +8,20 @@ _Nothing yet — next change lands here._
 
 ---
 
+## [0.5.0] — 2026-05-23
+
+The "author your widget" release. Every widget now exposes its source and routes into an AI-powered editor for both its glue and its extensions.
+
+### Added
+- **View widget source.** Every widget's ⋯ menu has a new **View source** option that opens a sheet with three tabs: **Glue** (the small React app that wires extensions to UI components — the prominent default), **Extensions** (one or many data sources the glue depends on, expandable to view each extension's `.js`), and **Live spec** (the actual JSON payload). Examples show `@weather` (1 extension), `@market` (2 extensions — quote + history), `@today` (3 extensions — macOS Calendar + Google Calendar + Reminders). Includes copy-to-clipboard, Escape-to-close, and an **Open in editor** primary CTA.
+- **Glue editor AI authoring flow.** Clicking **Open in editor** on the Glue tab routes into a Cursor-style editor scoped to the widget's `glue.jsx`. Same mental model as the extension authoring flow: a chat dock scoped to the file, structured "Proposed change" cards with diffs + Preview / Apply / Reject, slash commands (`/explain` `/refactor` `/preview` `/add-extension` `/components`). The AI can install new extensions mid-conversation (shown as a `Will install · hacker-news v0.1.0` chip) and a sandbox preview renders the proposed widget inline before you apply.
+- **Rename canvas on iOS.** Canvas dropdown now includes `Rename "..."` (pencil icon) and `Delete "..."` (red, only when ≥ 2 canvases). Each shows the current name inline so it's obvious which one will be affected.
+
+### Reworked
+- Desktop canvas tabs get a `title` tooltip ("Double-click to rename") so the rename affordance is discoverable on hover.
+
+---
+
 ## [0.4.1] — 2026-05-22
 
 Patch on 0.4.0 — workspace + session ergonomics.
