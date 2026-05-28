@@ -27,6 +27,34 @@
   <!-- Lucide icons (SF Symbols stand-in) -->
   <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 
+  <!-- Folder editor libs: react-arborist (tree) + @uiw/react-codemirror (editor).
+       Loaded via esm.sh as a module. We use an importmap + two tiny shims so
+       both libraries import `react` / `react-dom` from the same UMD React
+       already on `window`. Without this, esm.sh bundles its own React copy
+       per library, hooks see a null dispatcher, the editor crashes. -->
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "./react-shim.mjs",
+        "react-dom": "./react-dom-shim.mjs",
+        "react-dom/client": "./react-dom-shim.mjs",
+        "react/jsx-runtime": "./react-jsx-runtime-shim.mjs",
+        "react/jsx-dev-runtime": "./react-jsx-runtime-shim.mjs"
+      }
+    }
+  </script>
+  <script type="module">
+    import { Tree } from "https://esm.sh/react-arborist@3?external=react,react-dom";
+    import CodeMirror, { EditorView } from "https://esm.sh/@uiw/react-codemirror@4?external=react,react-dom";
+    import { javascript } from "https://esm.sh/@codemirror/lang-javascript@6?external=react";
+    import { json } from "https://esm.sh/@codemirror/lang-json@6?external=react";
+    import { oneDark } from "https://esm.sh/@codemirror/theme-one-dark@6";
+
+    window.ReactArborist  = { Tree };
+    window.ReactCodeMirror = { default: CodeMirror, EditorView, javascript, json, oneDark };
+    window.dispatchEvent(new Event("extlibs-ready"));
+  </script>
+
   <!-- Components — order matters; primitives → composites → app -->
   <script type="text/babel" src="Icon.jsx"></script>
   <script type="text/babel" src="Primitives.jsx"></script>
