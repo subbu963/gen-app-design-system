@@ -1,6 +1,6 @@
 # gen-app Design System
 
-**Current version: `0.5.0`** · [Changelog](CHANGELOG.md)
+**Current version: `0.7.0`** · [Changelog](CHANGELOG.md)
 
 A design system for **gen-app** — a Tauri v2 desktop + iOS app where you chat with an LLM and it builds live, self-updating widgets on a canvas. The system codifies an iOS-first, dark-only aesthetic that scales gracefully into a resizable macOS window.
 
@@ -13,6 +13,8 @@ A design system for **gen-app** — a Tauri v2 desktop + iOS app where you chat 
 > - API keys live in the OS keychain; the LLM emits declarative widget specs, never code
 >
 > **Update — theme switching.** The spec said dark-only, but on user request we added light + auto themes. Default is still dark. Light mode uses iOS HIG light tokens (`#F2F2F7` window, `#FFFFFF` card, `#007AFF` accent). Auto follows `prefers-color-scheme`. Settings → Appearance and the Tweaks panel both expose the picker.
+>
+> **Update — extension sandbox runtimes.** Phase 1 of the edge-extensions work landed a second extension sandbox: `runtime: 'deno'` runs each extension as a long-lived `deno run` subprocess (per-extension HTTPS proxy, scoped filesystem, `setrlimit` memory cap), desktop-only. The legacy `runtime: 'worker'` (in-webview, hardened `Function` scope) stays the iOS-safe path. The kind chip carries authorship; the new **runtime chip** carries the sandbox. See [ADR 0001](https://github.com/subbu963/gen-app/blob/phase1/edge-extensions/docs/adrs/0001-extension-sandbox-runtime.md) and the [Extension runtimes section](#extension-runtimes) below.
 
 ---
 
@@ -42,7 +44,7 @@ The system follows **design semver** — `MAJOR.MINOR.PATCH` mapped to design im
 | **MINOR** (`0.4.0`) | New components, new screens, new tokens, deprecations |
 | **PATCH** (`0.3.1`) | Token tweaks, copy fixes, bug fixes, asset replacements |
 
-Currently at **`0.3.0`** — early, expect breaking changes between minors. All changes are recorded in [CHANGELOG.md](CHANGELOG.md). The format is loosely [Keep a Changelog](https://keepachangelog.com) with two design-specific sections: **Reworked** (visual changes to existing surfaces) and **Flagged** (open questions / inferred decisions still pending).
+Currently at **`0.7.0`** — early, expect breaking changes between minors. All changes are recorded in [CHANGELOG.md](CHANGELOG.md). The format is loosely [Keep a Changelog](https://keepachangelog.com) with two design-specific sections: **Reworked** (visual changes to existing surfaces) and **Flagged** (open questions / inferred decisions still pending).
 
 When shipping a change:
 1. The unreleased entry at the top of `CHANGELOG.md` accumulates everything since the last tag.
@@ -209,9 +211,27 @@ Use as `<i data-lucide="message-circle"></i>` then call `lucide.createIcons()`.
 
 ---
 
-## Component inventory → Konsta mapping
+## Extension runtimes
 
-| gen-app component | Konsta primitive | Notes |
+Phase 1 of the edge-extensions work landed a second extension sandbox. The system now ships **two runtimes**, distinguished by a small mono chip on every Extensions row:
+
+| Chip | Where it runs | What it can do | Trust model |
+| --- | --- | --- | --- |
+| `worker` *(gray)* | A hardened Web Worker inside the webview, behind a `Function`-scope deny-list | Single `.js` file. Stateless providers. `ctx.fetch` (host-brokered), `ctx.secrets`, `ctx.storage`, `ctx.log`. No DOM, no Tauri. | The only third-party-code path that survives App Store rule 2.5.2 — **iOS-only going forward**, and the legacy default for user-authored single-file extensions. |
+| `deno` *(green)* | A long-lived `deno run` subprocess spawned via `tauri-plugin-shell`'s sidecar | Folder of TS, `Deno.serve` HTTP server, scoped read/write filesystem, file-based DBs (`sqlite` / `pglite` / `redka`), `npm:` and `jsr:` imports, secrets injected as `SECRET_<NAME>` env vars. | Explicit `--allow-*` permission flags per spawn, per-extension HTTPS proxy enforcing `manifest.permissions.network`, `setrlimit(RLIMIT_AS, …)` memory cap, exponential restart backoff. **Desktop-only.** |
+
+**Visual rules.**
+- The **kind chip** carries authorship (`bundled` / `user` / `npm · stdio` / `http · oauth`); the **runtime chip** carries the sandbox (`worker` / `deno`). They're orthogonal — a user extension can be either runtime; bundled can be either. Pair them on every row in the order *kind → runtime* (left to right).
+- Every deno row also carries a 7px **process-status dot**: green pulse = running, gray = idle, faded = stopped, red = crashed / backoff. The dot rides next to the runtime chip, not the toggle.
+- Clicking a deno row opens the **runtime detail sheet** (`preview/extension-runtime-detail.html`) — status, lifecycle controls (idle-stop slider, memory ceiling segmented), network-allowlist read-out, recent stderr feed. Worker rows have no detail sheet (nothing to show — it's stateless).
+- On iOS, every deno row is **soft-disabled with rationale**, not hidden. Same pattern as the stdio MCP row: row stays visible at 0.5 opacity, tap opens the iOS rationale block (App Store 2.5.2 + alternatives: remote MCP, or re-author as worker). Cached data from prior desktop refreshes stays readable in widgets.
+- **Numbers come from the code, not from us.** `MAX_CONCURRENT = 16`, disabled after `MAX_CRASHES = 5`, default `idleStopMs = 5 min`, 2s SIGTERM grace before SIGKILL. The runtime detail copy quotes these literals from `ext_runtime.rs` — keep them in sync.
+
+**When to recommend which.** When suggesting how to author a new extension: anything that needs a database, a long-lived process, an `npm:` import, or more than a single file → `deno`. Anything that's a pure provider, must run on iPhone, or that the user wants to author in the in-app single-file editor → `worker`. Bundled examples today: clock and weather both ship in both flavours; the deno variant wins when both are available on desktop.
+
+---
+
+## Component inventory → Konsta mapping| gen-app component | Konsta primitive | Notes |
 | --- | --- | --- |
 | Window chrome (desktop) | *(custom)* | Konsta has no desktop window; we wrap the iOS layout in a `macos_window` frame. |
 | App bar / nav | `Navbar` | iOS title-bar style; on desktop, hosted inside the macOS toolbar. |
@@ -230,6 +250,17 @@ Use as `<i data-lucide="message-circle"></i>` then call `lucide.createIcons()`.
 | Progress | `Preloader` (Konsta) | Spinner for loading states. |
 | Empty state | `Block` *(custom hero)* | Centered icon + headline + CTA. |
 | Widget card | `Card` *(custom content)* | The widget itself is a Konsta Card with header (title + overflow) + body (declarative spec render) + footer (timestamp). |
+| Install sheet *(multi-step)* | `Sheet` *(custom shell)* | Wizard pattern: segmented header (transport / mode) → per-step body → terminal state. First baked for MCP install; reusable. |
+| Auth-status row | *(custom atom)* | 14px Lucide shield variant + issuer URL + scopes/footnote, tinted green / orange / red per state. Used in MCP auth, provider OAuth, per-secret detail. |
+| Spec viewer | `<pre>` *(custom)* | Pretty-printed JSON-Schema block — cyan keys, green strings, orange numbers, italic comments. Carries MCP tools sheet, Glue "Live spec" tab, anything that shows a schema. |
+| Progress row *(long-running)* | *(custom atom)* | Filename + quant chip + percent + Cancel on row 1; thin 4px bar; mono "current / total · rate · ETA" on row 3. Carries HF downloads, MCP `npx` warm-up, canvas zip imports. |
+| Kind chip | *(custom)* | 9.5px mono pill — `bundled` / `user` / `npm · stdio` / `http · oauth`. Carries **authorship**. One per Extensions row. |
+| Runtime chip | *(custom)* | 9.5px mono pill orthogonal to the kind chip — `worker` (gray, in-webview, iOS-safe) or `deno` (green, subprocess sandbox, desktop). Pairs with the kind chip; never replaces it. |
+| Process-status dot | *(custom)* | 7px circle: green pulse = running, gray = idle, faded = stopped, red = crashed / backoff. Rides next to the runtime chip on a deno row; reused in the runtime detail sheet and Logs viewer. |
+| Runtime detail sheet | `Sheet` *(custom)* | Drill-in from a deno row: header + status strip + runtime/resources two-column + lifecycle controls + network-allowlist read-out + recent stderr. Replaces a generic "settings" pane for long-lived extensions. |
+| Allowlist host pill | *(custom)* | Mono 10.5px pill on neutral background — one per entry in `manifest.permissions.network`. Read-only here; this is what the proxy enforces. |
+| Source filter chip | *(custom)* | Toggleable mono chip with per-source count — `all` / `harness` / `mcp` / `glue` / `canvas` / `logs` / `app`. Off-state is opacity 0.5. |
+| Import-resolution group | *(custom)* | Three-color section header (green / default / orange) grouping incoming items by action — never blocks import. |
 
 ---
 
@@ -250,9 +281,13 @@ These were not resolvable from the spec alone. **Three are now answered** based 
 
 5. **Onboarding minimum viable.** ✅ **Answered — 4 steps with optional sample.** Welcome → Pick provider → Add key → **Try a sample**. The sample step offers three one-tap widgets (Weather / Stock / Calendar) and a "Skip — take me to the canvas" escape hatch.
 
-6. **Extensions discovery.** The spec mentions toggle on/off in Settings but says nothing about *installing* extensions. We hide install UI for now; existing extensions list as toggles.
+6. **Extensions discovery.** ✅ **Answered — three kinds, two install flows, two runtimes.** Settings → Extensions distinguishes **bundled** (workspace packages), **user-authored** (in-app editor), and **MCP-server** (npm stdio or remote HTTP). Each row also carries a runtime chip (`worker` / `deno`). Two CTAs in the header: **New extension** (user-authored) and **Install MCP server** (multi-step sheet with transport + auth pickers). Kind chips on each row carry authorship; runtime chips carry the sandbox. See `preview/settings-extensions.html`, `preview/install-mcp-sheet.html`, and `preview/extension-runtime-detail.html`.
 
 7. **Embeddings setup is buried.** We put it in Settings → Senses, not in onboarding. Onboarding doesn't need embeddings to write a widget. If first-run search-over-widgets is critical, embeddings should join the onboarding flow.
+
+8. **Deno extension authoring entry point.** ⚠︎ **Open.** The Developer panel covers spawn/bind/respond/SIGTERM diagnostics, but "create a new deno extension" doesn't have a first-class CTA yet. Today user-authored deno extensions arrive via the Developer panel or `extInstall`. A real "New deno extension" template + scaffold flow is needed before this stops being a power-user-only path. Until then the **New extension** CTA continues to default to `worker`.
+
+9. **Bundle weight — universal vs split.** Shipping `deno` for both archs adds ~240 MB to the `.app`. Universal-binary lipo-join can roughly halve this; arch-specific `.app` builds halve it again. Decision deferred to release engineering; the design doesn't change either way, but a Settings → About line should show *which* `deno` version is shipping so support can debug.
 
 ---
 

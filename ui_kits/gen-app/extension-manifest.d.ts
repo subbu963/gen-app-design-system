@@ -1,180 +1,341 @@
 /**
  * gen-app extension manifest — TypeScript schema
  * ----------------------------------------------
- * Extensions are user-authored JS modules that pull data from external sources
- * (HTTP APIs, OS-bridged services, local files) and emit widget payloads.
+ * An extension is a folder with a `manifest.json` and one or more source
+ * files. Two sandbox runtimes can host extension code:
  *
- * Each extension lives as a single `.js` file in the project's extensions
- * directory and exports two named bindings:
+ *   • `runtime: 'worker'` (legacy default) — a folder of one or more JS
+ *     files, bundled into a single ESM module by esbuild at install time
+ *     and run in a hardened Web Worker inside the webview. The only
+ *     third-party-code path that survives App Store rule 2.5.2, so it's
+ *     the iOS-only path going forward.
  *
- *   export const manifest: ExtensionManifest;
- *   export async function run(ctx: ExtensionContext): Promise<void>;
+ *   • `runtime: 'deno'` — a long-lived `deno run` subprocess spawned via
+ *     `tauri-plugin-shell`'s sidecar with explicit `--allow-*` flags.
+ *     Reach the network through a per-extension HTTPS proxy that enforces
+ *     `permissions.network`. File-based databases sit under the extension
+ *     dir. Desktop only.
  *
- * The host (gen-app) loads the module in a sandboxed worker. Extensions can
- * only reach the outside world through `ctx`, never through `globalThis`.
+ * See [ADR 0001 — Sandbox runtime for long-lived extensions](
+ *   ../../docs/adrs/0001-extension-sandbox-runtime.md) and
+ * `libs/extension-sdk/src/index.ts` for the runtime types.
  *
- * This file is the source of truth for both the editor's autocomplete /
- * type-checking and the runtime validator. Ship it alongside the binary.
+ * This file is the source of truth for the editor's autocomplete and the
+ * runtime validator. Ship it alongside the binary.
  */
+
+import type { JSONSchema7 as JsonSchema } from "json-schema";
 
 // ─── Manifest ───────────────────────────────────────────────────────────────
 
-export interface ExtensionManifest {
+export type ExtensionRuntime = "worker" | "deno";
+
+export type Capability = "network" | "storage";
+
+export type DatabaseKind = "sqlite" | "pglite" | "redka";
+
+/** A port the deno-runtime extension wants the host to allocate. */
+export interface PortDecl {
+  name: string;
+  /** Future-proofing — only 'http' is wired today. */
+  protocol: "http";
+}
+
+/** Lifecycle knobs for `runtime: 'deno'` extensions. */
+export interface ExtensionLifecycle {
   /**
-   * Lowercase-kebab-case id, unique per device. Becomes the filename
-   * (`{id}.js`) and the prefix users address from chat (`@open-meteo …`).
+   * Idle threshold in milliseconds before the host stops the subprocess.
+   * `0` opts out (long-lived). Defaults to 5 minutes.
    */
+  idleStopMs?: number;
+  /** Enable file-watching → restart in dev mode. Off in production. */
+  hotReload?: boolean;
+}
+
+/** Manifest declaration of a single provider. */
+export interface ProviderManifest {
+  name: string;
+  description: string;
+  /** JSON Schema for the provider's input — doubles as the LLM tool schema. */
+  input: JsonSchema;
+  /** Optional JSON Schema for the output. Documentation only. */
+  output?: JsonSchema;
+  /**
+   * For `runtime: 'deno'`: HTTP route to call on the extension's loopback
+   * server. Defaults to `POST /<name>` when omitted.
+   */
+  route?: string;
+}
+
+/**
+ * A host-side React renderer a bundled extension can ship. Reachable from
+ * any widget via `Custom`'s `component: "<extId>:<name>"`. User-authored
+ * extensions cannot ship renderers (they run inside the sandbox worker
+ * and can't reach the host React tree).
+ */
+export interface RendererManifest {
+  /** Local name. The widget references this as `"<extId>:<name>"`. */
+  name: string;
+  /** One-line description shown to the LLM. Include the prop shape. */
+  doc: string;
+  /** Optional JSON Schema for the prop bag. Documentation only in V1. */
+  propSchema?: JsonSchema;
+}
+
+/** Refresh cadence the host uses to call a widget's default binding. */
+export type RefreshPolicy =
+  | { kind: "interval"; ms: number }
+  | { kind: "manual" };
+
+/** Manifest declaration of a widget the extension ships. */
+export interface WidgetManifest {
+  name: string;
+  description: string;
+  /** Declarative spec template rendered by the host. */
+  spec: WidgetSpec;
+  /** Provider whose output feeds the widget's `state` when instantiated. */
+  defaultBinding?: string;
+  /** Default refresh cadence when this widget is created. */
+  refresh?: RefreshPolicy;
+}
+
+/** The parsed contents of an extension's `manifest.json`. */
+export interface ExtensionManifest {
+  /** Lowercase-kebab-case id, unique per device. e.g. "open-meteo". */
   id: string;
 
   /** Human-readable name. Sentence case. e.g. "Open-Meteo". */
   name: string;
 
-  /** Short description shown on the Extensions list. ≤ 60 chars. */
-  description?: string;
-
   /** Semver. Used for upgrade prompts when bundled extensions update. */
   version: `${number}.${number}.${number}`;
 
-  /**
-   * Author display string. e.g. "gen-app team" or "Your Name <you@host>".
-   * Pure cosmetic — does NOT affect trust.
-   */
+  /** Short description shown on the Extensions list. ≤ 80 chars. */
+  description: string;
+
+  /** Author display string. Pure cosmetic — does NOT affect trust. */
   author?: string;
 
   /**
-   * Refresh interval in seconds. The host calls `run` on this cadence
-   * while at least one widget that uses the extension is mounted.
-   *   - `0`   → run only on widget mount or explicit user action
-   *   - `n>0` → run every `n` seconds (clamped to ≥ 5 in production)
+   * Sandbox runtime. Defaults to `'worker'` for back-compat. Worker
+   * extensions are iOS-safe; deno extensions are desktop-only.
    */
-  refresh: number;
+  runtime?: ExtensionRuntime;
+
+  /** For `runtime: 'deno'`: relative path to the entry file. */
+  entry?: string;
+
+  /** Ports the host should allocate (values delivered via env). */
+  ports?: PortDecl[];
+
+  /** Curated file-based DBs the extension uses. Pure declaration. */
+  databases?: DatabaseKind[];
+
+  /** Capabilities the host must grant for providers to run. */
+  capabilities: Capability[];
 
   /**
-   * Network allowlist. Only requests whose URL host matches one of these
-   * patterns will be permitted by `ctx.fetch`. Use `["*"]` to allow any.
-   *
-   *   "api.open-meteo.com"              — exact host
-   *   "*.googleapis.com"                — wildcard subdomain
-   *   "https://example.com/api/v1/*"    — URL prefix
+   * Capability allowlists, primarily for user-authored extensions.
+   * Bundled extensions can rely on the coarser `capabilities` instead.
    */
   permissions?: {
+    /** Hosts `ctx.fetch` may reach — exact host, `*.host`, or URL prefix. */
     network?: string[];
-    /** If true, extension may read+write a small JSON blob via `ctx.storage`. */
-    storage?: boolean;
-    /** Names of secrets this extension may READ from the keychain. */
+    /** Secret names this extension may read via `ctx.secrets`. */
     secrets?: string[];
   };
 
+  /** Lifecycle knobs (deno runtime only). */
+  lifecycle?: ExtensionLifecycle;
+
+  /** Providers — named, schema-typed data functions the harness can call. */
+  providers: ProviderManifest[];
+
+  /** Widgets the extension ships. */
+  widgets: WidgetManifest[];
+
   /**
-   * Declares the widget kinds this extension can serve. The model uses
-   * this to pick the right extension when creating a widget.
+   * Host-side React renderers this extension ships. Bundled extensions only.
+   * Reachable from any widget via `Custom` with `component: "<extId>:<name>"`.
    */
-  provides?: Array<{
-    kind: string;             // matches Widget.kind, e.g. "weather"
-    /** Markdown describing what props the widget accepts. */
-    propsDoc?: string;
-  }>;
+  renderers?: RendererManifest[];
 }
 
-// ─── Runtime context passed to `run` ────────────────────────────────────────
+// ─── Runtime context — worker variant ───────────────────────────────────────
 
-export interface ExtensionContext {
-  /** Always present. The widget instance the extension was triggered for. */
-  widget: {
-    /** Stable widget id (matches the canvas widget). */
-    id: string;
-    /** User-edited @symbol. Falls back to `manifest.id`. */
-    symbol: string;
-    /** Anything the model emitted into the widget spec. */
-    props: Record<string, unknown>;
+/**
+ * Context passed to each provider in a `runtime: 'worker'` extension.
+ * The worker has no DOM and no Tauri — outside access goes through
+ * `ctx` only.
+ */
+export interface WorkerProviderContext {
+  /**
+   * Capability-gated HTTP. Requires the `network` capability; the request
+   * is proxied through the Rust host (centralised policy, no CORS).
+   */
+  fetch(
+    url: string,
+    init?: { method?: string; headers?: Record<string, string>; body?: string },
+  ): Promise<{ status: number; ok: boolean; body: string }>;
+
+  /** Capability-gated key/value storage, scoped to this extension. */
+  storage: {
+    get(key: string): Promise<string | null>;
+    set(key: string, value: string): Promise<void>;
   };
 
   /**
-   * Read-only view of secrets this extension is allowed to read.
-   * Anything NOT listed in `manifest.permissions.secrets` is `undefined`.
-   * Constants (non-secret plaintext) flow through here too.
+   * Secrets this extension may read — only the names declared in
+   * `manifest.permissions.secrets` and permitted by their scope. An
+   * undeclared / scope-blocked name reads back as `undefined`.
    */
   secrets: Readonly<Record<string, string | undefined>>;
 
-  /**
-   * Sandboxed fetch. Same shape as `window.fetch`. Throws if the URL host
-   * doesn't match `manifest.permissions.network`.
-   */
-  fetch: typeof fetch;
+  /** Structured logging surfaced in Settings → Logs. */
+  log(...args: unknown[]): void;
 
-  /**
-   * Persist a small JSON blob (≤ 100 KB) keyed under this extension.
-   * Only available if `manifest.permissions.storage === true`.
-   */
-  storage?: {
-    get<T = unknown>(key: string): Promise<T | null>;
-    set(key: string, value: unknown): Promise<void>;
-    delete(key: string): Promise<void>;
-  };
-
-  /**
-   * Push a widget payload back to the host. The host renders it and updates
-   * the widget on the canvas. Calling `emit` multiple times in one `run`
-   * is allowed — the last call wins.
-   */
-  emit(payload: WidgetPayload): void;
-
-  /** Structured logging. Shows up in Settings → Logs. */
-  log(level: "info" | "warn" | "error", message: string, data?: unknown): void;
-
-  /**
-   * AbortSignal that fires if the user removes the widget or the host
-   * cancels the run. Long-running fetches should pass `{ signal }`.
-   */
+  /** Aborted if the host cancels the call. */
   signal: AbortSignal;
 }
 
-// ─── Widget payload ──────────────────────────────────────────────────────────
+/** A worker-runtime provider: a named, schema-typed data function. */
+export type WorkerProviderFn = (
+  input: Record<string, unknown>,
+  ctx: WorkerProviderContext,
+) => Promise<unknown> | unknown;
 
-export type WidgetStatus = "live" | "stale" | "pending" | "error";
+// ─── Runtime context — deno variant ─────────────────────────────────────────
 
-export interface WidgetPayload {
-  /** Drives the status pill rendered in the widget header. */
-  status: WidgetStatus;
-  /** Human-readable error message when `status === "error"`. */
-  message?: string;
-  /** Arbitrary kind-specific data. The widget's renderer destructures from here. */
-  [key: string]: unknown;
+/**
+ * Context built by `startExtension` for a `runtime: 'deno'` subprocess.
+ * Read from env (`PORT`, `EXTENSION_ID`, `DATA_DIR`, `SECRET_<NAME>`),
+ * wired to SIGTERM, and surfaced as a typed object for ergonomic authoring.
+ */
+export interface DenoExtensionContext {
+  /** Stable extension id (matches `manifest.id`). */
+  readonly extensionId: string;
+  /** Host-assigned loopback port. Bind exactly here. */
+  readonly port: number;
+  /** Per-extension data directory — the only writable path. */
+  readonly dir: string;
+  /** Manifest-declared secret values; keys are `permissions.secrets` names. */
+  readonly secrets: Readonly<Record<string, string>>;
+  /** Aborted on SIGTERM (idle-stop / app-quit / uninstall). */
+  readonly signal: AbortSignal;
+  /** Same as global `fetch`; outbound is gated by the host's proxy. */
+  readonly fetch: typeof fetch;
+  /** Structured log to the host's event_log. */
+  log(level: "info" | "warn" | "error", message: string, data?: unknown): void;
+  /** Path helpers for curated file-based DB engines. */
+  readonly databases: {
+    path(name: string, kind: DatabaseKind): string;
+  };
 }
 
-// ─── Example: a minimal stub the model can scaffold from ────────────────────
+export type DenoExtensionHandler = (
+  ctx: DenoExtensionContext,
+) => Promise<void> | void;
+
+// ─── Widget spec (declarative tree the harness renders) ────────────────────
+
+/**
+ * The widget tree shipped in a `WidgetManifest.spec`. The model never
+ * regenerates the spec on a data refresh — bindings into `state` carry
+ * the new values into the existing tree.
+ */
+export interface WidgetSpec {
+  title: string;
+  state: Record<string, unknown>;
+  root: WidgetNode;
+  /** Optional model-authored script for declarative interactivity. */
+  script?: string;
+}
+
+export interface WidgetNode {
+  /** Matches a key in `WIDGET_COMPONENTS` (e.g. "Stack", "Stat", "Card"). */
+  type: string;
+  id?: string;
+  props?: Record<string, unknown>;
+  children?: WidgetNode[];
+  /** Map a prop name to a dotted path into the widget's `state`. */
+  bindings?: Record<string, string>;
+  /** Wire UI events to named handlers in `spec.script`. */
+  events?: Record<string, string>;
+  /** Two-way bind an input to a `state` path. */
+  model?: string;
+}
+
+// ─── Examples ───────────────────────────────────────────────────────────────
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
-const example_manifest: ExtensionManifest = {
-  id: "open-meteo",
-  name: "Open-Meteo",
-  description: "Weather forecasts · 16-day",
-  version: "1.2.0",
-  author: "gen-app team",
-  refresh: 60,
+
+/** Example: a worker-runtime user extension (folder of one or more .js files; bundled into the sandbox worker at install time). */
+const example_worker_manifest: ExtensionManifest = {
+  id: "rss",
+  name: "RSS",
+  version: "0.3.0",
+  description: "Subscribe + summarise feeds.",
+  runtime: "worker",
+  capabilities: ["network", "storage"],
   permissions: {
-    network: ["api.open-meteo.com"],
-    storage: false,
-    secrets: ["UNIT"],
+    network: ["*"],
+    secrets: [],
   },
-  provides: [
-    { kind: "weather", propsDoc: "{ lat: number, lon: number }" },
+  providers: [
+    {
+      name: "fetchFeed",
+      description: "Fetch an Atom/RSS feed and return its parsed items.",
+      input: {
+        type: "object",
+        properties: { url: { type: "string", description: "Feed URL." } },
+        required: ["url"],
+      },
+    },
   ],
+  widgets: [],
 };
 
-async function example_run(ctx: ExtensionContext) {
-  const { lat = 40.6782, lon = -73.9442 } = (ctx.widget.props as { lat?: number; lon?: number });
-  const url = new URL("https://api.open-meteo.com/v1/forecast");
-  url.searchParams.set("latitude", String(lat));
-  url.searchParams.set("longitude", String(lon));
-  url.searchParams.set("current", "temperature_2m");
-  url.searchParams.set("temperature_unit", ctx.secrets.UNIT ?? "fahrenheit");
-  const res = await ctx.fetch(url, { signal: ctx.signal });
-  if (!res.ok) {
-    ctx.log("error", `HTTP ${res.status}`);
-    ctx.emit({ status: "error", message: `HTTP ${res.status}` });
-    return;
-  }
-  const data = await res.json();
-  ctx.emit({ status: "live", temp: Math.round(data.current.temperature_2m) });
+/** Example: a deno-runtime bundled extension. */
+const example_deno_manifest: ExtensionManifest = {
+  id: "weather",
+  name: "Weather",
+  version: "2.1.0",
+  description:
+    "Current conditions and an hourly outlook for any city, via Open-Meteo.",
+  runtime: "deno",
+  entry: "index.ts",
+  ports: [{ name: "http", protocol: "http" }],
+  databases: [],
+  capabilities: ["network"],
+  permissions: {
+    network: ["geocoding-api.open-meteo.com", "api.open-meteo.com"],
+    secrets: [],
+  },
+  lifecycle: { idleStopMs: 5 * 60_000 },
+  providers: [
+    {
+      name: "getForecast",
+      description: "Current conditions + hourly outlook for a city.",
+      input: {
+        type: "object",
+        properties: { city: { type: "string" } },
+        required: ["city"],
+      },
+    },
+  ],
+  widgets: [],
+};
+
+/** Example: a deno-runtime extension entry file using the SDK. */
+async function example_deno_entry(
+  startExtension: (handler: DenoExtensionHandler) => Promise<void>,
+) {
+  await startExtension(async (ctx) => {
+    const server = (globalThis as { Deno?: { serve: Function } }).Deno!.serve(
+      { port: ctx.port, hostname: "127.0.0.1", signal: ctx.signal },
+      (_req: Request) =>
+        Response.json({ ok: true, extensionId: ctx.extensionId }),
+    );
+    await server.finished;
+  });
 }

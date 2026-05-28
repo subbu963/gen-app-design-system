@@ -2,34 +2,130 @@
 <html><head><meta charset="utf-8">
 <link rel="stylesheet" href="../colors_and_type.css">
 <script src="../tailwind.js"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  body { background: var(--bg-base); font-family: var(--font-sans); color: var(--fg1); }
+  .src-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 8px; border-radius: 999px;
+    font-family: var(--font-mono); font-size: 10.5px; font-weight: 600;
+    background: var(--bg-card-elevated); color: var(--fg2);
+    border: 1px solid var(--stroke-soft); cursor: pointer;
+    user-select: none;
+  }
+  .src-chip.on { background: var(--color-accent-tint); color: var(--color-accent); border-color: rgba(10,132,255,0.28); }
+  .src-chip.off { opacity: 0.5; }
+  .src-chip .count { color: var(--fg3); font-weight: 500; }
+  .src-chip.on .count { color: var(--color-accent); }
+  .row { display: grid; grid-template-columns: 88px 44px 88px 1fr; gap: 8px; padding: 4px 12px 4px 10px; border-left: 2px solid transparent; align-items: baseline; font-family: var(--font-mono); font-size: 10.5px; }
+  .row .ts   { color: var(--fg3); }
+  .row .lvl  { font-weight: 700; font-size: 9.5px; color: var(--fg2); }
+  .row .src  { color: var(--color-accent); }
+  .row .msg  { color: var(--fg1); word-break: break-all; }
+  .row.warn  { border-left-color: var(--color-orange); background: rgba(255,159,10,0.04); }
+  .row.warn .lvl { color: var(--color-orange); }
+  .row.err   { border-left-color: var(--color-red); background: rgba(255,69,58,0.04); }
+  .row.err .lvl { color: var(--color-red); }
+</style>
 </head>
-<body class="m-0 p-[18px] bg-window font-sans flex flex-col gap-2.5">
-  <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold flex justify-between items-center">
-    <span>Live · last 30 min</span>
-    <span class="flex gap-1.5">
-      <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-tint-green text-green">info 6</span>
-      <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-tint-orange text-orange">warn 1</span>
+<body class="m-0 p-5 font-sans flex flex-col gap-3">
+
+  <!-- Header -->
+  <div class="flex items-end justify-between">
+    <div>
+      <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold flex items-center gap-1.5 mb-1">
+        <i data-lucide="file-text" class="w-3 h-3"></i> Settings → Diaries · device-local only
+      </div>
+      <div class="text-lg font-bold text-fg1 -tracking-[0.012em]">Logs · last 30 min</div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button class="text-[12px] font-semibold py-1.5 px-3 rounded-full border border-soft text-fg1 bg-card-elevated cursor-pointer flex items-center gap-1.5">
+        <i data-lucide="pause" class="w-3.5 h-3.5"></i>Pause
+      </button>
+      <button class="text-[12px] font-semibold py-1.5 px-3 rounded-full border border-soft text-fg1 bg-card-elevated cursor-pointer flex items-center gap-1.5">
+        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Clear
+      </button>
+      <button class="text-[12px] font-semibold py-1.5 px-3 rounded-full text-white bg-accent cursor-pointer flex items-center gap-1.5 border-none">
+        <i data-lucide="download" class="w-3.5 h-3.5"></i>Export .zip
+      </button>
+    </div>
+  </div>
+
+  <!-- Severity + source filters -->
+  <div class="flex items-center gap-3 flex-wrap">
+
+    <!-- Level pills -->
+    <div class="flex items-center gap-1.5">
+      <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-tint-green text-green">info 12</span>
+      <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-tint-orange text-orange">warn 2</span>
       <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-tint-red text-red">err 1</span>
-    </span>
-  </div>
-  <div class="bg-base border border-soft rounded-sm py-1.5 font-mono text-[10.5px]">
-    <div class="grid grid-cols-[84px_38px_88px_1fr] gap-1.5 px-2.5 py-0.5 border-l-2 border-transparent items-baseline">
-      <span class="text-fg3">09:41:22.014</span><span class="font-bold text-[9.5px] text-fg2">INFO</span><span class="text-accent">chat</span><span class="text-fg1 break-all">→ groq · llama-3.3-70b · 412 tokens</span>
     </div>
-    <div class="grid grid-cols-[84px_38px_88px_1fr] gap-1.5 px-2.5 py-0.5 border-l-2 border-transparent items-baseline">
-      <span class="text-fg3">09:41:22.428</span><span class="font-bold text-[9.5px] text-fg2">INFO</span><span class="text-accent">chat</span><span class="text-fg1 break-all">← tool_call: create_widget(weather, brooklyn)</span>
-    </div>
-    <div class="grid grid-cols-[84px_38px_88px_1fr] gap-1.5 px-2.5 py-0.5 border-l-2 border-transparent items-baseline">
-      <span class="text-fg3">09:41:22.430</span><span class="font-bold text-[9.5px] text-fg2">INFO</span><span class="text-accent">widget</span><span class="text-fg1 break-all">spawn @weather (id w-1747824082)</span>
-    </div>
-    <div class="grid grid-cols-[84px_38px_88px_1fr] gap-1.5 px-2.5 py-0.5 border-l-2 border-transparent items-baseline">
-      <span class="text-fg3">09:41:22.512</span><span class="font-bold text-[9.5px] text-fg2">INFO</span><span class="text-accent">ext:meteo</span><span class="text-fg1 break-all">GET /v1/forecast?lat=40.6782&amp;lon=-73.9442 · 200 · 88ms</span>
-    </div>
-    <div class="grid grid-cols-[84px_38px_88px_1fr] gap-1.5 px-2.5 py-0.5 border-l-2 items-baseline" style="border-left-color:var(--color-orange);background:rgba(255,159,10,0.04)">
-      <span class="text-fg3">09:42:17.882</span><span class="font-bold text-[9.5px] text-orange">WARN</span><span class="text-accent">ext:yahoo</span><span class="text-fg1 break-all">rate-limit: backing off 30s</span>
-    </div>
-    <div class="grid grid-cols-[84px_38px_88px_1fr] gap-1.5 px-2.5 py-0.5 border-l-2 items-baseline" style="border-left-color:var(--color-red);background:rgba(255,69,58,0.04)">
-      <span class="text-fg3">09:43:02.044</span><span class="font-bold text-[9.5px] text-red">ERROR</span><span class="text-accent">embed</span><span class="text-fg1 break-all">local llama.cpp · timeout after 5000ms</span>
+
+    <span class="text-fg4">·</span>
+
+    <!-- Source chips · "all" + 6 subsystems -->
+    <div class="flex items-center gap-1.5 flex-wrap">
+      <span class="src-chip on">
+        <i data-lucide="check" class="w-3 h-3"></i>all <span class="count">15</span>
+      </span>
+      <span class="src-chip on">harness <span class="count">6</span></span>
+      <span class="src-chip on">mcp <span class="count">3</span></span>
+      <span class="src-chip">glue <span class="count">2</span></span>
+      <span class="src-chip">canvas <span class="count">1</span></span>
+      <span class="src-chip">logs <span class="count">2</span></span>
+      <span class="src-chip off">app <span class="count">1</span></span>
     </div>
   </div>
+
+  <!-- Stream -->
+  <div class="bg-base border border-soft rounded-md py-1.5">
+
+    <div class="row"><span class="ts">09:41:22.014</span><span class="lvl">INFO</span><span class="src">harness</span><span class="msg">turn start · groq · llama-3.3-70b · 1 user msg</span></div>
+    <div class="row"><span class="ts">09:41:22.428</span><span class="lvl">INFO</span><span class="src">harness</span><span class="msg">tool_call create_widget(weather, brooklyn)</span></div>
+    <div class="row"><span class="ts">09:41:22.430</span><span class="lvl">INFO</span><span class="src">canvas</span><span class="msg">spawn @weather (id w-1747824082) · session main</span></div>
+    <div class="row"><span class="ts">09:41:22.512</span><span class="lvl">INFO</span><span class="src">harness</span><span class="msg">ext-call open-meteo/forecast lat=40.6782 lon=-73.9442 · 88ms · 200</span></div>
+
+    <!-- MCP block -->
+    <div class="row"><span class="ts">09:41:58.301</span><span class="lvl">INFO</span><span class="src">mcp</span><span class="msg">spawn npm @modelcontextprotocol/server-filesystem · npx (pid 41203)</span></div>
+    <div class="row"><span class="ts">09:41:58.842</span><span class="lvl">INFO</span><span class="src">mcp</span><span class="msg">initialize → 3 tools (read_file, write_file, list_directory)</span></div>
+    <div class="row"><span class="ts">09:42:14.108</span><span class="lvl">INFO</span><span class="src">mcp</span><span class="msg">tools/call list_directory(/Users/me/Notes) · 12ms · ok</span></div>
+
+    <!-- Glue -->
+    <div class="row"><span class="ts">09:42:15.220</span><span class="lvl">INFO</span><span class="src">glue</span><span class="msg">runtime mount @market.glue · 2 hooks (yahoo-finance, hacker-news)</span></div>
+    <div class="row"><span class="ts">09:42:15.380</span><span class="lvl">INFO</span><span class="src">glue</span><span class="msg">@market.glue render · 8 components · 22 nodes</span></div>
+
+    <!-- Warning -->
+    <div class="row warn"><span class="ts">09:42:17.882</span><span class="lvl">WARN</span><span class="src">harness</span><span class="msg">ext:yahoo-finance rate-limit · backing off 30s · retry-after honoured</span></div>
+
+    <!-- Error -->
+    <div class="row err"><span class="ts">09:43:02.044</span><span class="lvl">ERROR</span><span class="src">mcp</span><span class="msg">child exit code 1 for mcp.linear-app · stderr tail: "ECONNREFUSED 127.0.0.1:54321" · respawning in 2s</span></div>
+
+    <!-- Recovery -->
+    <div class="row"><span class="ts">09:43:04.052</span><span class="lvl">INFO</span><span class="src">mcp</span><span class="msg">respawn mcp.linear-app (attempt 2) · pid 41507 · ok</span></div>
+  </div>
+
+  <!-- Footer: what's in the zip -->
+  <div class="bg-card rounded-[10px] p-3 flex items-center gap-3">
+    <i data-lucide="package" class="w-3.5 h-3.5 text-fg3 shrink-0"></i>
+    <div class="text-[11px] text-fg2 leading-[1.45] flex-1">
+      <span class="text-fg1 font-semibold">Export .zip</span> bundles
+      <code class="font-mono text-fg1">events.json</code>,
+      <code class="font-mono text-fg1">events.ndjson</code>, and an env-snapshot
+      <code class="font-mono text-fg1">meta.json</code> (OS, app version, active provider, enabled extensions — no secret values).
+    </div>
+    <span class="text-[10px] font-mono text-fg3 uppercase tracking-wide">~ 84 KB</span>
+  </div>
+
+  <!-- Pattern notes -->
+  <div class="border-t border-hairline pt-5 mt-2 max-w-[860px] flex flex-col gap-3">
+    <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold">Pattern notes</div>
+    <ul class="text-[12.5px] text-fg2 leading-[1.7] list-disc pl-5 space-y-1">
+      <li><strong class="text-fg1 font-semibold">Source chips are toggleable, not radio.</strong> Click any to subtract it. The <code class="font-mono">all</code> chip is a master + count, always first.</li>
+      <li><strong class="text-fg1 font-semibold">Off-state is opacity, not greyscale.</strong> Soft 0.5 — still scannable, still mono.</li>
+      <li><strong class="text-fg1 font-semibold">Severity colors stay row-level.</strong> Left border + 4% tint background only on warn/err; info rows are clean.</li>
+      <li><strong class="text-fg1 font-semibold">Export is one button, not a menu.</strong> If a user wants to share logs, the zip is the artifact — no per-format options.</li>
+    </ul>
+  </div>
+
+  <script>lucide.createIcons();</script>
 </body></html>

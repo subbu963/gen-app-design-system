@@ -1,0 +1,216 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>Install MCP server</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="../tailwind.js"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  body { background: var(--bg-base); font-family: var(--font-sans); color: var(--fg1); }
+  .field-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; color: var(--fg3); }
+  .field-input { background: var(--bg-input); border: 1px solid var(--stroke-soft); color: var(--fg1); border-radius: 8px; padding: 8px 11px; font-size: 13px; outline: none; font-family: var(--font-mono); }
+  .field-input:focus { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-glow); }
+  .field-footnote { font-size: 11px; color: var(--fg2); display: flex; gap: 4px; align-items: center; line-height: 1.45; }
+  .seg { display: inline-flex; padding: 2px; background: var(--bg-base); border-radius: 8px; gap: 0; }
+  .seg > div { padding: 5px 12px; font-size: 12px; font-weight: 500; color: var(--fg2); border-radius: 6px; cursor: pointer; }
+  .seg > div.on { background: var(--bg-card-elevated); color: var(--fg1); box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+  .btn-primary { background: var(--color-accent); color: white; font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 999px; border: none; cursor: pointer; }
+  .btn-secondary { background: var(--bg-card-elevated); color: var(--fg1); font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 999px; border: none; cursor: pointer; }
+  .btn-ghost { background: transparent; color: var(--fg2); font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--stroke-soft); cursor: pointer; }
+  .sheet { width: 540px; background: var(--bg-card); border: 1px solid var(--stroke-soft); border-radius: 18px; padding: 18px; box-shadow: var(--elev-3); display: flex; flex-direction: column; gap: 14px; }
+  .anno { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; color: var(--fg3); margin-bottom: 10px; }
+</style>
+</head>
+<body class="p-7 flex flex-col gap-7 items-start min-h-screen">
+
+  <!-- Header -->
+  <div class="flex flex-col gap-1 max-w-[720px]">
+    <div class="text-[11px] text-fg3 font-mono uppercase tracking-[0.06em] flex items-center gap-1.5">
+      <i data-lucide="package" class="w-3 h-3"></i> Install MCP server · Settings → Extensions
+    </div>
+    <h1 class="text-[26px] font-semibold -tracking-[0.022em] leading-[1.15]">Install MCP server</h1>
+    <p class="text-[13px] text-fg2 leading-[1.55] mt-1">A multi-step config sheet — two transports, three auth modes, an installed-summary terminal state. The sheet never reads or writes secret values; only their names.</p>
+  </div>
+
+  <!-- Three states side by side -->
+  <div class="flex gap-6 items-start flex-wrap">
+
+    <!-- State 1: stdio + bearer -->
+    <div class="flex flex-col gap-2">
+      <div class="anno"><span class="text-accent">▸</span> state 1 — stdio (npm) + bearer</div>
+      <div class="sheet">
+        <div class="flex items-center gap-2">
+          <i data-lucide="package" class="w-4 h-4 text-fg2"></i>
+          <div class="flex-1 text-[15px] font-semibold text-fg1">Install MCP server</div>
+          <button class="text-fg2 cursor-pointer bg-transparent border-none"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+
+        <div class="seg w-full">
+          <div class="on flex-1 text-center">stdio (npm)</div>
+          <div class="flex-1 text-center">Remote (HTTP)</div>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="field-label">npm package</label>
+          <input class="field-input" value="@modelcontextprotocol/server-filesystem" />
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="field-label">Args — one per line, optional</label>
+          <textarea class="field-input min-h-[52px]" rows="2">/Users/me/Notes</textarea>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="field-label">Env-secret names — one per line, optional</label>
+          <textarea class="field-input min-h-[52px]" rows="2">GITHUB_TOKEN</textarea>
+          <div class="field-footnote">
+            <i data-lucide="lock" class="w-3 h-3 text-fg3"></i>
+            Values come from <strong class="text-fg1 font-semibold">Settings → Secrets</strong>.
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="field-label">Authentication</label>
+          <div class="seg w-full">
+            <div class="flex-1 text-center">None</div>
+            <div class="on flex-1 text-center">Bearer</div>
+            <div class="flex-1 text-center">OAuth</div>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="field-label">Bearer-token secret</label>
+          <select class="field-input">
+            <option>GITHUB_TOKEN</option>
+          </select>
+          <div class="field-footnote">
+            <i data-lucide="lock" class="w-3 h-3 text-fg3"></i>
+            The token is read from <strong class="text-fg1 font-semibold">Settings → Secrets</strong> at call time.
+          </div>
+        </div>
+
+        <div class="field-footnote leading-[1.5]">
+          gen-app spawns the server with <code class="font-mono text-fg2">npx -y &lt;package&gt;</code>.
+          An MCP server runs as your user — review the package before installing.
+        </div>
+
+        <div class="flex justify-end gap-2 pt-1">
+          <button class="btn-secondary">Cancel</button>
+          <button class="btn-primary">Install</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- State 2: HTTP + OAuth (probed) -->
+    <div class="flex flex-col gap-2">
+      <div class="anno"><span class="text-accent">▸</span> state 2 — remote http + oauth (after probe + connect)</div>
+      <div class="sheet">
+        <div class="flex items-center gap-2">
+          <i data-lucide="package" class="w-4 h-4 text-fg2"></i>
+          <div class="flex-1 text-[15px] font-semibold text-fg1">Install MCP server</div>
+          <button class="text-fg2 cursor-pointer bg-transparent border-none"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+
+        <div class="seg w-full">
+          <div class="flex-1 text-center">stdio (npm)</div>
+          <div class="on flex-1 text-center">Remote (HTTP)</div>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="field-label">Endpoint URL</label>
+          <div class="flex gap-2">
+            <input class="field-input flex-1" value="https://mcp.linear.app/sse" />
+            <button class="btn-secondary">Probe</button>
+          </div>
+          <div class="field-footnote">
+            Server requires OAuth · <span class="font-mono text-fg1">https://mcp.linear.app</span>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label class="field-label">Authentication</label>
+          <div class="seg w-full">
+            <div class="flex-1 text-center">None</div>
+            <div class="flex-1 text-center">Bearer</div>
+            <div class="on flex-1 text-center">OAuth</div>
+          </div>
+        </div>
+
+        <!-- Auth status row pattern -->
+        <div class="rounded-lg p-2.5 border" style="background: rgba(48,209,88,0.06); border-color: rgba(48,209,88,0.18)">
+          <div class="flex items-center gap-2">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-green"></i>
+            <span class="text-xs text-fg1 font-semibold">Authorized with</span>
+            <span class="text-xs font-mono text-fg1">https://mcp.linear.app</span>
+          </div>
+          <div class="field-footnote mt-1 ml-[22px]">
+            scopes: <span class="font-mono text-fg2">read write issues:read</span> · redirect: <span class="font-mono">http://127.0.0.1:54321/callback</span>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-1">
+          <button class="btn-ghost">Re-authorize</button>
+        </div>
+
+        <div class="field-footnote leading-[1.5]">
+          Remote MCP traffic is plain HTTPS; auth tokens go in the keychain under <code class="font-mono">mcp.linear-app.*</code>.
+        </div>
+
+        <div class="flex justify-end gap-2 pt-1">
+          <button class="btn-secondary">Cancel</button>
+          <button class="btn-primary">Install</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- State 3: Installed summary (terminal) -->
+    <div class="flex flex-col gap-2">
+      <div class="anno"><span class="text-green">●</span> state 3 — installed terminal state</div>
+      <div class="sheet">
+        <div class="flex items-center gap-2">
+          <i data-lucide="package" class="w-4 h-4 text-fg2"></i>
+          <div class="flex-1 text-[15px] font-semibold text-fg1">Install MCP server</div>
+          <button class="text-fg2 cursor-pointer bg-transparent border-none"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+
+        <div class="text-xs leading-[1.5] text-fg2">
+          <span class="text-green font-semibold">Installed</span> as
+          <span class="font-mono text-fg1">mcp.modelcontextprotocol-server-filesystem</span> ·
+          <span class="text-fg1">3 tools</span>.
+        </div>
+
+        <div class="bg-base rounded-lg overflow-hidden border border-soft max-h-[260px] overflow-y-auto">
+          <div class="px-3 py-2.5 border-b border-hairline">
+            <div class="font-mono text-[13px] text-fg1 font-semibold">read_file</div>
+            <div class="text-[11px] text-fg2 mt-0.5">Read a file from the allowed directory.</div>
+          </div>
+          <div class="px-3 py-2.5 border-b border-hairline">
+            <div class="font-mono text-[13px] text-fg1 font-semibold">write_file</div>
+            <div class="text-[11px] text-fg2 mt-0.5">Create or overwrite a file in the allowed directory.</div>
+          </div>
+          <div class="px-3 py-2.5">
+            <div class="font-mono text-[13px] text-fg1 font-semibold">list_directory</div>
+            <div class="text-[11px] text-fg2 mt-0.5">List immediate children of a directory.</div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2">
+          <button class="btn-primary">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pattern notes -->
+  <div class="border-t border-hairline pt-6 mt-4 max-w-[860px] flex flex-col gap-3">
+    <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold">Pattern notes</div>
+    <ul class="text-[12.5px] text-fg2 leading-[1.7] list-disc pl-5 space-y-1">
+      <li><strong class="text-fg1 font-semibold">Transport segmented stays at the top.</strong> Switching it resets every downstream field — we don't try to translate paths to URLs.</li>
+      <li><strong class="text-fg1 font-semibold">Probe is HTTP-only.</strong> stdio gets no probe — the npm package is its own contract; the user fills env names manually.</li>
+      <li><strong class="text-fg1 font-semibold">Auth-status row.</strong> The green "Authorized with …" panel is a reusable atom — also use it post-OAuth on Provider auth, and on per-secret detail.</li>
+      <li><strong class="text-fg1 font-semibold">Install is disabled until composeAuth() returns non-null.</strong> The footer button stays in the layout but goes <code class="font-mono text-fg3">opacity 0.4</code>.</li>
+      <li><strong class="text-fg1 font-semibold">Terminal state replaces the body, not the chrome.</strong> Same sheet, same title — only the form swaps for the synthesized-providers list.</li>
+    </ul>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body></html>

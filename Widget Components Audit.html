@@ -1,0 +1,454 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>Widget Components — audit</title>
+<link rel="stylesheet" href="colors_and_type.css">
+<script src="tailwind.js"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  body { background: var(--bg-base); font-family: var(--font-sans); color: var(--fg1); }
+
+  /* Local primitive styles — copied verbatim from libs/widget-components/src/primitives.css
+     so this audit page renders the real thing. */
+  .wc-card { border-radius: var(--radius-lg); border: 1px solid var(--stroke-soft); background: var(--bg-card); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .wc-card-title { font-size: var(--text-sm); font-weight: 600; color: var(--fg1); }
+  .wc-card-sub { font-size: var(--text-xs); color: var(--fg2); }
+  .wc-card-body { display: flex; flex-direction: column; gap: 8px; }
+
+  .wc-stat-label { font-size: var(--text-2xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg2); font-weight: 600; }
+  .wc-stat-value { font-size: var(--text-2xl); font-weight: 700; color: var(--fg1); letter-spacing: -0.022em; line-height: 1.1; }
+  .wc-stat-delta { font-size: var(--text-xs); color: var(--fg2); }
+  .wc-stat-delta--positive { color: var(--color-green); }
+  .wc-stat-delta--negative { color: var(--color-red); }
+  .wc-stattile { background: var(--bg-card-elevated); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+
+  /* Tones — currently in primitives.css with hardcoded RGBA values. */
+  .wc-tone-accent   { background-image: radial-gradient(circle at 80% 0%, rgba(10,132,255,0.16), transparent 60%); }
+  .wc-tone-positive { background-image: radial-gradient(circle at 80% 0%, rgba(48,209,88,0.16),  transparent 60%); }
+  .wc-tone-warning  { background-image: radial-gradient(circle at 80% 0%, rgba(255,159,10,0.18), transparent 60%); }
+  .wc-tone-danger   { background-image: radial-gradient(circle at 70% 0%, rgba(255,69,58,0.20),  transparent 65%); }
+  .wc-tone-warm     { background-image: radial-gradient(circle at 80% 0%, rgba(255,159,10,0.22), transparent 62%); }
+  .wc-tone-cool     { background-image: linear-gradient(180deg, rgba(64,128,200,0.20),  transparent 70%); }
+  .wc-tone-night    { background-image: linear-gradient(180deg, rgba(94,92,230,0.22),   transparent 65%); }
+
+  /* Calendar */
+  .wc-calendar { background: var(--bg-input); border: 1px solid var(--stroke-soft); border-radius: var(--radius-md); padding: 12px; user-select: none; }
+  .wc-calendar-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .wc-calendar-title { font-size: var(--text-sm); font-weight: 600; color: var(--fg1); }
+  .wc-calendar-nav { width: 28px; height: 28px; border: none; background: none; color: var(--fg2); font-size: var(--text-lg); cursor: pointer; border-radius: var(--radius-sm); }
+  .wc-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .wc-calendar-dow { font-size: var(--text-2xs); color: var(--fg3); text-align: center; padding: 4px 0; font-weight: 600; letter-spacing: 0.04em; }
+  .wc-calendar-day { aspect-ratio: 1; display: inline-flex; align-items: center; justify-content: center; font-size: var(--text-sm); color: var(--fg1); background: none; border: none; border-radius: 50%; cursor: pointer; }
+  .wc-calendar-day.is-muted { color: var(--fg3); }
+  .wc-calendar-day.is-today { box-shadow: inset 0 0 0 1px var(--color-accent); color: var(--color-accent); }
+  .wc-calendar-day.is-on { background: var(--color-accent); color: var(--fg-on-accent); font-weight: 600; }
+
+  /* TimePicker */
+  .wc-timepicker { background: var(--bg-input); border: 1px solid var(--stroke-soft); border-radius: var(--radius-md); padding: 8px 12px 12px; user-select: none; width: 200px; }
+  .wc-tp-cols { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; height: 160px; }
+  .wc-tp-band { position: absolute; top: 50%; left: 8px; right: 8px; height: 32px; transform: translateY(-50%); background: var(--bg-hover); border-radius: var(--radius-sm); pointer-events: none; }
+  .wc-tp-col { flex: 0 0 64px; height: 100%; overflow-y: hidden; position: relative; z-index: 1; }
+  .wc-tp-pad { height: 64px; }
+  .wc-tp-cell { display: flex; align-items: center; justify-content: center; height: 32px; width: 100%; font-size: var(--text-base); font-family: var(--font-mono); color: var(--fg3); }
+  .wc-tp-cell.is-on { color: var(--fg1); font-weight: 600; }
+  .wc-tp-sep { font-family: var(--font-mono); color: var(--fg2); font-size: var(--text-lg); z-index: 1; }
+
+  /* Stepper */
+  .wc-stepper { display: inline-flex; align-items: stretch; background: var(--bg-input); border: 1px solid var(--stroke-soft); border-radius: var(--radius-md); overflow: hidden; }
+  .wc-stepper-btn { width: 36px; height: 36px; background: none; border: none; color: var(--fg1); font-size: var(--text-lg); font-weight: 500; cursor: pointer; }
+  .wc-stepper-value { min-width: 44px; display: inline-flex; align-items: center; justify-content: center; font-size: var(--text-sm); font-family: var(--font-mono); color: var(--fg1); border-left: 1px solid var(--stroke-hairline); border-right: 1px solid var(--stroke-hairline); }
+
+  /* Range slider */
+  .wc-range { position: relative; height: 28px; width: 240px; }
+  .wc-range-track { position: absolute; top: 50%; left: 0; right: 0; height: 4px; transform: translateY(-50%); background: var(--fg4); border-radius: 999px; }
+  .wc-range-fill { position: absolute; top: 50%; height: 4px; transform: translateY(-50%); background: var(--color-accent); border-radius: 999px; }
+  .wc-range-readout { display: flex; justify-content: space-between; margin-top: 6px; font-size: var(--text-xs); font-family: var(--font-mono); color: var(--fg2); }
+  .wc-range-handle { position: absolute; top: 50%; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 2px solid var(--color-accent); transform: translate(-50%, -50%); box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
+
+  /* Progress ring */
+  .wc-ring-track { fill: none; stroke: var(--bg-card-elevated); }
+  .wc-ring-fill  { fill: none; stroke: var(--color-accent); stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; }
+
+  /* Banner */
+  .wc-banner { display: flex; gap: 10px; padding: 10px 12px; border-radius: var(--radius-md); font-size: var(--text-sm); }
+  .wc-banner-title { font-weight: 600; }
+  .wc-banner--info    { background: var(--color-accent-tint); color: var(--color-accent); }
+  .wc-banner--success { background: var(--tint-green);   color: var(--color-green); }
+  .wc-banner--warning { background: var(--tint-orange);  color: var(--color-orange); }
+  .wc-banner--error   { background: var(--tint-red);     color: var(--color-red); }
+
+  /* Skeleton */
+  .wc-skeleton { background: linear-gradient(90deg, var(--bg-card-elevated), var(--bg-hover), var(--bg-card-elevated)); background-size: 200% 100%; animation: wc-shimmer 1.6s linear infinite; border-radius: var(--radius-xs); }
+  .wc-skeleton--circle { border-radius: 50%; }
+  @keyframes wc-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  .wc-skeleton-group { display: flex; flex-direction: column; gap: 6px; }
+
+  /* Spinner */
+  .wc-spinner { display: inline-block; border: 2px solid var(--bg-card-elevated); border-right-color: var(--color-accent); border-radius: 50%; width: 18px; height: 18px; animation: wc-spin 0.7s linear infinite; }
+  @keyframes wc-spin { to { transform: rotate(360deg); } }
+
+  /* Pie + bars */
+  .wc-bars { display: flex; align-items: flex-end; gap: 2px; height: 64px; }
+  .wc-bar { flex: 1; background: var(--color-accent); border-radius: 2px 2px 0 0; min-height: 2px; }
+  .wc-pie-legend { display: flex; flex-direction: column; gap: 4px; font-size: var(--text-xs); }
+  .wc-pie-legend-row { display: flex; align-items: center; gap: 6px; }
+  .wc-pie-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  /* Layout for the audit page itself */
+  .audit-card { background: var(--bg-card); border: 1px solid var(--stroke-soft); border-radius: var(--radius-lg); padding: 18px; }
+  .verdict-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-family: var(--font-mono); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .v-pass    { background: var(--tint-green);   color: var(--color-green); }
+  .v-fix     { background: var(--tint-orange);  color: var(--color-orange); }
+  .v-missing { background: var(--tint-red);     color: var(--color-red); }
+  .anno { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; color: var(--fg3); }
+  .specimen-grid { display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start; }
+  .specimen { background: var(--bg-window); border: 1px solid var(--stroke-soft); border-radius: var(--radius-lg); padding: 18px; display: flex; align-items: center; justify-content: center; min-height: 240px; }
+</style>
+</head>
+<body class="m-0 px-8 py-10 max-w-[1100px] mx-auto">
+
+  <!-- ─── Header ─── -->
+  <header class="flex flex-col gap-3 pb-7 mb-8 border-b border-hairline">
+    <div class="flex items-center gap-2 text-[11px] text-fg3 font-mono uppercase tracking-[0.06em]">
+      <i data-lucide="boxes" class="w-3 h-3"></i>
+      <span>libs/widget-components/src/components</span>
+      <span class="text-fg4">·</span>
+      <span>11 source files · 41 renderers</span>
+    </div>
+    <h1 class="text-[34px] font-semibold -tracking-[0.022em] leading-[1.1]">Widget components vs. design system</h1>
+    <p class="text-[14px] text-fg2 leading-[1.55] max-w-[760px]">
+      Read every file under <code class="code">libs/widget-components</code> and audited it against <code class="code">colors_and_type.css</code> tokens and the existing previews. <strong class="text-fg1 not-italic">Bottom line:</strong> the package is in great shape — <code class="code">primitives.css</code> keys cleanly off design tokens for ~95% of the surface. Two real things to do: (1) eight new primitives need preview cards in the system, (2) the <code class="code">tone</code> prop on <code class="code">Card</code>/<code class="code">Stack</code> bypasses the token vocabulary with hardcoded RGBA.
+    </p>
+  </header>
+
+  <!-- ─── Verdict overview ─── -->
+  <h2 class="text-[20px] font-semibold mb-4 -tracking-[0.012em]">Verdict by file</h2>
+  <div class="grid grid-cols-3 gap-3 mb-10">
+    <!-- File cards -->
+    <div class="audit-card">
+      <div class="flex items-center justify-between mb-1.5">
+        <div class="font-mono text-[12px] text-fg1 font-semibold">layout.tsx</div>
+        <span class="verdict-pill v-fix">fix tones</span>
+      </div>
+      <div class="text-[12px] text-fg2 leading-[1.5]">Card / Stack / Grid / Divider — all radii, spacing, strokes via tokens. <strong class="text-fg1">But</strong> the 7 <code class="code">tone</code> tints hardcode RGBA.</div>
+    </div>
+    <div class="audit-card">
+      <div class="flex items-center justify-between mb-1.5">
+        <div class="font-mono text-[12px] text-fg1 font-semibold">text.tsx</div>
+        <span class="verdict-pill v-pass">pass</span>
+      </div>
+      <div class="text-[12px] text-fg2 leading-[1.5]">Heading 1/2/3 lands on text-lg/base/sm — matches <code class="code">.h3</code>/<code class="code">.h4</code>/<code class="code">.footnote</code> in the system.</div>
+    </div>
+    <div class="audit-card">
+      <div class="flex items-center justify-between mb-1.5">
+        <div class="font-mono text-[12px] text-fg1 font-semibold">display.tsx</div>
+        <span class="verdict-pill v-pass">pass</span>
+      </div>
+      <div class="text-[12px] text-fg2 leading-[1.5]">Stat, StatTile, Badge, List, Table, KeyValue, Progress, Image, Avatar, Icon — all clean. <em class="text-fg1 not-italic">ProgressRing</em> is new (no preview yet).</div>
+    </div>
+    <div class="audit-card">
+      <div class="flex items-center justify-between mb-1.5">
+        <div class="font-mono text-[12px] text-fg1 font-semibold">inputs.tsx</div>
+        <span class="verdict-pill v-pass">pass</span>
+      </div>
+      <div class="text-[12px] text-fg2 leading-[1.5]">Button/Select/TextInput/Textarea/Checkbox/Switch/Radio/Slider/Tabs/Segmented/Menu all match. <em class="text-fg1 not-italic">Stepper</em> and <em class="text-fg1 not-italic">RangeSlider</em> are new.</div>
+    </div>
+    <div class="audit-card">
+      <div class="flex items-center justify-between mb-1.5">
+        <div class="font-mono text-[12px] text-fg1 font-semibold">charts.tsx</div>
+        <span class="verdict-pill v-pass">pass</span>
+      </div>
+      <div class="text-[12px] text-fg2 leading-[1.5]">LineChart + BarChart + PieChart use a 6-color palette derived from status tokens. <em class="text-fg1 not-italic">PieChart</em> is new (no preview yet).</div>
+    </div>
+    <div class="audit-card">
+      <div class="flex items-center justify-between mb-1.5">
+        <div class="font-mono text-[12px] text-fg1 font-semibold">feedback.tsx</div>
+        <span class="verdict-pill v-missing">no previews</span>
+      </div>
+      <div class="text-[12px] text-fg2 leading-[1.5]">Banner / Spinner / Skeleton — all use tokens correctly, but none have a preview card in the design system.</div>
+    </div>
+    <div class="audit-card">
+      <div class="flex items-center justify-between mb-1.5">
+        <div class="font-mono text-[12px] text-fg1 font-semibold">Calendar.tsx</div>
+        <span class="verdict-pill v-missing">no preview</span>
+      </div>
+      <div class="text-[12px] text-fg2 leading-[1.5]">Month grid with accent-circle selection + today ring. Visually correct; needs a documentation card.</div>
+    </div>
+    <div class="audit-card">
+      <div class="flex items-center justify-between mb-1.5">
+        <div class="font-mono text-[12px] text-fg1 font-semibold">TimePicker.tsx</div>
+        <span class="verdict-pill v-missing">no preview</span>
+      </div>
+      <div class="text-[12px] text-fg2 leading-[1.5]">iOS-style scroll-snap wheel + AM/PM segmented. Tokens clean; needs a card.</div>
+    </div>
+    <div class="audit-card">
+      <div class="flex items-center justify-between mb-1.5">
+        <div class="font-mono text-[12px] text-fg1 font-semibold">WeatherIcon.tsx</div>
+        <span class="verdict-pill v-pass">pass</span>
+      </div>
+      <div class="text-[12px] text-fg2 leading-[1.5]">12 conditions; semantic colors via tokens. <code class="code">preview/weather-conditions.html</code> already documents 8 of them — only <em class="text-fg1 not-italic">partly-cloudy</em>, <em class="text-fg1 not-italic">night-cloudy</em>, <em class="text-fg1 not-italic">snow</em>, <em class="text-fg1 not-italic">fog</em> aren't shown.</div>
+    </div>
+  </div>
+
+  <!-- ────────────────────────────────────────────── -->
+  <!-- ISSUE 1 — Tone tokens                          -->
+  <!-- ────────────────────────────────────────────── -->
+  <h2 class="text-[20px] font-semibold mb-2 -tracking-[0.012em]">Issue 1 · <code class="code">tone</code> tints bypass the token vocabulary</h2>
+  <p class="text-[13px] text-fg2 leading-[1.55] mb-5 max-w-[780px]">
+    <code class="code">Card</code> and <code class="code">Stack</code> accept a <code class="code">tone</code> prop with seven values: <code class="code">accent / positive / warning / danger / warm / cool / night</code>. The styling lands in <code class="code">primitives.css</code> as inline RGBA gradients. Three of those values (<code class="code">warm</code>, <code class="code">cool</code>, <code class="code">night</code>) are <em class="text-fg1 not-italic">new vocabulary</em> — they have no presence in our design tokens. The other four mimic our existing tints (<code class="code">--color-accent-tint</code>, <code class="code">--tint-green</code>, <code class="code">--tint-orange</code>, <code class="code">--tint-red</code>) but use slightly different opacity values and a radial-gradient origin we never spec'd.
+  </p>
+
+  <div class="grid grid-cols-7 gap-2 mb-5">
+    <div class="wc-card wc-tone-accent">
+      <div class="wc-card-title">accent</div>
+      <div class="wc-card-sub">rgba(10,132,255,0.16)</div>
+    </div>
+    <div class="wc-card wc-tone-positive">
+      <div class="wc-card-title">positive</div>
+      <div class="wc-card-sub">rgba(48,209,88,0.16)</div>
+    </div>
+    <div class="wc-card wc-tone-warning">
+      <div class="wc-card-title">warning</div>
+      <div class="wc-card-sub">rgba(255,159,10,0.18)</div>
+    </div>
+    <div class="wc-card wc-tone-danger">
+      <div class="wc-card-title">danger</div>
+      <div class="wc-card-sub">rgba(255,69,58,0.20)</div>
+    </div>
+    <div class="wc-card wc-tone-warm">
+      <div class="wc-card-title">warm</div>
+      <div class="wc-card-sub">new — no token</div>
+    </div>
+    <div class="wc-card wc-tone-cool">
+      <div class="wc-card-title">cool</div>
+      <div class="wc-card-sub">new — no token</div>
+    </div>
+    <div class="wc-card wc-tone-night">
+      <div class="wc-card-title">night</div>
+      <div class="wc-card-sub">new — no token</div>
+    </div>
+  </div>
+
+  <div class="audit-card mb-12">
+    <div class="anno mb-3">Recommended fix</div>
+    <p class="text-[13px] text-fg2 leading-[1.55] mb-3">
+      Add seven tone tokens to <code class="code">colors_and_type.css</code> and rewrite <code class="code">primitives.css</code> to consume them. This (a) gets the colors into the system's source of truth, (b) lets the light theme override them later, (c) survives any future palette tweak without touching <code class="code">widget-components</code>.
+    </p>
+    <pre class="font-mono text-[11px] leading-[1.55] bg-base p-3 rounded-md border border-soft overflow-x-auto"><span class="text-fg3">/* colors_and_type.css — add to :root + :root[data-theme="light"] */</span>
+<span style="color: var(--color-cyan)">--tone-accent</span>:   radial-gradient(circle at 80% 0%, var(--color-accent-tint), transparent 60%);
+<span style="color: var(--color-cyan)">--tone-positive</span>: radial-gradient(circle at 80% 0%, var(--tint-green),  transparent 60%);
+<span style="color: var(--color-cyan)">--tone-warning</span>:  radial-gradient(circle at 80% 0%, var(--tint-orange), transparent 60%);
+<span style="color: var(--color-cyan)">--tone-danger</span>:   radial-gradient(circle at 70% 0%, var(--tint-red),    transparent 65%);
+<span style="color: var(--color-cyan)">--tone-warm</span>:     radial-gradient(circle at 80% 0%, rgba(255,159,10,0.22), transparent 62%);
+<span style="color: var(--color-cyan)">--tone-cool</span>:     linear-gradient(180deg,  rgba(64,128,200,0.20),  transparent 70%);
+<span style="color: var(--color-cyan)">--tone-night</span>:    linear-gradient(180deg,  rgba(94,92,230,0.22),   transparent 65%);
+
+<span class="text-fg3">/* libs/widget-components/src/primitives.css — replace each rule */</span>
+.wc-tone-accent   { background-image: <span style="color: var(--color-cyan)">var(--tone-accent)</span>; }
+.wc-tone-positive { background-image: <span style="color: var(--color-cyan)">var(--tone-positive)</span>; }
+<span class="text-fg3">/* … etc */</span></pre>
+    <div class="text-[11px] text-fg3 mt-3">
+      <em class="text-fg2 not-italic">Bonus:</em> consider renaming <code class="code">warm</code> / <code class="code">cool</code> / <code class="code">night</code> to something that signals their intent —
+      these aren't tones, they're <em class="text-fg2 not-italic">mood backdrops</em> for weather and time-of-day. Could be a separate
+      <code class="code">backdrop</code> prop on Card if you want the semantics clean.
+    </div>
+  </div>
+
+  <!-- ────────────────────────────────────────────── -->
+  <!-- ISSUE 2 — Missing previews                     -->
+  <!-- ────────────────────────────────────────────── -->
+  <h2 class="text-[20px] font-semibold mb-2 -tracking-[0.012em]">Issue 2 · Eight components missing from the system</h2>
+  <p class="text-[13px] text-fg2 leading-[1.55] mb-5 max-w-[780px]">
+    The components exist and render correctly — they just have no documentation card. Until they're in the system, anyone designing on top of <code class="code">widget-components</code> has to read the source to know they exist. Specimens below; I'll roll them into a new <code class="code">widget-primitives-extras.html</code> if you'd like.
+  </p>
+
+  <!-- Calendar -->
+  <div class="specimen-grid mb-6">
+    <div class="specimen">
+      <div class="wc-calendar w-[300px]">
+        <div class="wc-calendar-head">
+          <button class="wc-calendar-nav">‹</button>
+          <div class="wc-calendar-title">May 2026</div>
+          <button class="wc-calendar-nav">›</button>
+        </div>
+        <div class="wc-calendar-grid">
+          <div class="wc-calendar-dow">Su</div><div class="wc-calendar-dow">Mo</div><div class="wc-calendar-dow">Tu</div><div class="wc-calendar-dow">We</div><div class="wc-calendar-dow">Th</div><div class="wc-calendar-dow">Fr</div><div class="wc-calendar-dow">Sa</div>
+          <button class="wc-calendar-day is-muted">26</button><button class="wc-calendar-day is-muted">27</button><button class="wc-calendar-day is-muted">28</button><button class="wc-calendar-day is-muted">29</button><button class="wc-calendar-day is-muted">30</button>
+          <button class="wc-calendar-day">1</button><button class="wc-calendar-day">2</button>
+          <button class="wc-calendar-day">3</button><button class="wc-calendar-day">4</button><button class="wc-calendar-day">5</button><button class="wc-calendar-day">6</button><button class="wc-calendar-day">7</button><button class="wc-calendar-day">8</button><button class="wc-calendar-day">9</button>
+          <button class="wc-calendar-day">10</button><button class="wc-calendar-day">11</button><button class="wc-calendar-day is-today">12</button><button class="wc-calendar-day">13</button><button class="wc-calendar-day">14</button><button class="wc-calendar-day">15</button><button class="wc-calendar-day">16</button>
+          <button class="wc-calendar-day">17</button><button class="wc-calendar-day">18</button><button class="wc-calendar-day">19</button><button class="wc-calendar-day">20</button><button class="wc-calendar-day is-on">21</button><button class="wc-calendar-day">22</button><button class="wc-calendar-day">23</button>
+          <button class="wc-calendar-day">24</button><button class="wc-calendar-day">25</button><button class="wc-calendar-day">26</button><button class="wc-calendar-day">27</button><button class="wc-calendar-day">28</button><button class="wc-calendar-day">29</button><button class="wc-calendar-day">30</button>
+          <button class="wc-calendar-day">31</button><button class="wc-calendar-day is-muted">1</button><button class="wc-calendar-day is-muted">2</button><button class="wc-calendar-day is-muted">3</button><button class="wc-calendar-day is-muted">4</button><button class="wc-calendar-day is-muted">5</button><button class="wc-calendar-day is-muted">6</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="anno mb-1"><span class="text-fg1 font-mono">Calendar</span></div>
+      <p class="text-[13px] text-fg2 leading-[1.55] mb-2">
+        Month grid, ISO-string value (<code class="code">YYYY-MM-DD</code>), <code class="code">min</code>/<code class="code">max</code> bounds. Today: thin accent ring. Selected: accent-filled circle.
+      </p>
+      <p class="text-[12px] text-fg3 leading-[1.5]">All radii, accent, fg-on-accent come from tokens. The container uses <code class="code">--bg-input</code> — works when nested in a form; watch for low contrast when used standalone on <code class="code">--bg-window</code> in light theme.</p>
+    </div>
+  </div>
+
+  <!-- TimePicker -->
+  <div class="specimen-grid mb-6">
+    <div class="specimen">
+      <div class="wc-timepicker">
+        <div class="wc-tp-cols">
+          <div class="wc-tp-band"></div>
+          <div class="wc-tp-col">
+            <div class="wc-tp-pad"></div>
+            <div class="wc-tp-cell">07</div>
+            <div class="wc-tp-cell">08</div>
+            <div class="wc-tp-cell is-on">09</div>
+            <div class="wc-tp-cell">10</div>
+            <div class="wc-tp-cell">11</div>
+          </div>
+          <div class="wc-tp-sep">:</div>
+          <div class="wc-tp-col">
+            <div class="wc-tp-pad"></div>
+            <div class="wc-tp-cell">15</div>
+            <div class="wc-tp-cell">30</div>
+            <div class="wc-tp-cell is-on">45</div>
+            <div class="wc-tp-cell">00</div>
+            <div class="wc-tp-cell">15</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="anno mb-1"><span class="text-fg1 font-mono">TimePicker</span></div>
+      <p class="text-[13px] text-fg2 leading-[1.55] mb-2">
+        iOS-style scroll-snap wheel. Centre band uses <code class="code">--bg-hover</code>, selected row goes <code class="code">--fg1</code> + semibold against <code class="code">--fg3</code> siblings. <code class="code">use24h</code> and <code class="code">minuteStep</code> props.
+      </p>
+      <p class="text-[12px] text-fg3 leading-[1.5]">Fonts mono throughout — feels like the analog dial it's emulating.</p>
+    </div>
+  </div>
+
+  <!-- Stepper, RangeSlider, ProgressRing -->
+  <div class="specimen-grid mb-6">
+    <div class="specimen">
+      <div class="flex flex-col items-center gap-6">
+        <div class="wc-stepper">
+          <button class="wc-stepper-btn">−</button>
+          <span class="wc-stepper-value">4</span>
+          <button class="wc-stepper-btn">+</button>
+        </div>
+        <div>
+          <div class="wc-range">
+            <div class="wc-range-track"></div>
+            <div class="wc-range-fill" style="left: 25%; right: 30%"></div>
+            <div class="wc-range-handle" style="left: 25%"></div>
+            <div class="wc-range-handle" style="left: 70%"></div>
+          </div>
+          <div class="wc-range-readout"><span>25</span><span>70</span></div>
+        </div>
+        <div class="flex items-center gap-2">
+          <svg viewBox="0 0 32 32" width="32" height="32">
+            <circle class="wc-ring-track" cx="16" cy="16" r="13" stroke-width="3"/>
+            <circle class="wc-ring-fill" cx="16" cy="16" r="13" stroke-width="3"
+              stroke-dasharray="81.68" stroke-dashoffset="24.5"/>
+          </svg>
+          <span class="text-xs text-fg2">70%</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="anno mb-1"><span class="text-fg1 font-mono">Stepper · RangeSlider · ProgressRing</span></div>
+      <p class="text-[13px] text-fg2 leading-[1.55] mb-2">
+        <strong class="text-fg1 not-italic">Stepper</strong>: <code class="code">--bg-input</code> shell, mono value, +/− on either side.
+        <strong class="text-fg1 not-italic">RangeSlider</strong>: two overlapping native ranges with shared track + accent fill between the handles.
+        <strong class="text-fg1 not-italic">ProgressRing</strong>: same accent/track contract as <code class="code">Progress</code> but circular.
+      </p>
+      <p class="text-[12px] text-fg3 leading-[1.5]">All three use the same accent + stroke-soft + radius-md vocabulary as their linear cousins — they slot in without ceremony.</p>
+    </div>
+  </div>
+
+  <!-- PieChart -->
+  <div class="specimen-grid mb-6">
+    <div class="specimen">
+      <div style="display: flex; align-items: center; gap: 16px">
+        <svg viewBox="0 0 64 64" width="80" height="80">
+          <circle cx="32" cy="32" r="24" fill="none" stroke="var(--color-accent)" stroke-width="12"
+            stroke-dasharray="60.32 90.48" stroke-dashoffset="0" style="transform: rotate(-90deg); transform-origin: 50% 50%"/>
+          <circle cx="32" cy="32" r="24" fill="none" stroke="var(--color-purple)" stroke-width="12"
+            stroke-dasharray="45.24 105.56" stroke-dashoffset="-60.32" style="transform: rotate(-90deg); transform-origin: 50% 50%"/>
+          <circle cx="32" cy="32" r="24" fill="none" stroke="var(--color-green)" stroke-width="12"
+            stroke-dasharray="30.16 120.64" stroke-dashoffset="-105.56" style="transform: rotate(-90deg); transform-origin: 50% 50%"/>
+          <circle cx="32" cy="32" r="24" fill="none" stroke="var(--color-orange)" stroke-width="12"
+            stroke-dasharray="15.08 135.72" stroke-dashoffset="-135.72" style="transform: rotate(-90deg); transform-origin: 50% 50%"/>
+        </svg>
+        <div class="wc-pie-legend">
+          <div class="wc-pie-legend-row"><span class="wc-pie-swatch" style="background: var(--color-accent)"></span>Equities 40%</div>
+          <div class="wc-pie-legend-row"><span class="wc-pie-swatch" style="background: var(--color-purple)"></span>Bonds 30%</div>
+          <div class="wc-pie-legend-row"><span class="wc-pie-swatch" style="background: var(--color-green)"></span>Cash 20%</div>
+          <div class="wc-pie-legend-row"><span class="wc-pie-swatch" style="background: var(--color-orange)"></span>Other 10%</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="anno mb-1"><span class="text-fg1 font-mono">PieChart</span></div>
+      <p class="text-[13px] text-fg2 leading-[1.55] mb-2">
+        SVG donut driven by a 6-step accent → purple → green → orange → teal → pink palette. Per-slice <code class="code">color</code> override; <code class="code">donut</code> prop swaps stroke from 24 to 12 to reveal the hole.
+      </p>
+      <p class="text-[12px] text-fg3 leading-[1.5]">Palette matches <code class="code">LineChart</code>/<code class="code">BarChart</code> — pie + line + bar in the same widget will read as one set.</p>
+    </div>
+  </div>
+
+  <!-- Banner -->
+  <div class="specimen-grid mb-6">
+    <div class="specimen">
+      <div class="flex flex-col gap-2 w-full max-w-[280px]">
+        <div class="wc-banner wc-banner--info"><div><div class="wc-banner-title">Live</div><div>Streaming the latest quote.</div></div></div>
+        <div class="wc-banner wc-banner--success"><div><div class="wc-banner-title">Saved</div><div>Widget added to canvas.</div></div></div>
+        <div class="wc-banner wc-banner--warning"><div><div class="wc-banner-title">Rate-limited</div><div>Backing off 30 s.</div></div></div>
+        <div class="wc-banner wc-banner--error"><div><div class="wc-banner-title">Failed</div><div>Couldn't reach the server.</div></div></div>
+      </div>
+    </div>
+    <div>
+      <div class="anno mb-1"><span class="text-fg1 font-mono">Banner</span></div>
+      <p class="text-[13px] text-fg2 leading-[1.55] mb-2">
+        Four tones — <code class="code">info / success / warning / error</code> — each on its matching tint (accent-tint, tint-green, tint-orange, tint-red). Title + supporting text.
+      </p>
+      <p class="text-[12px] text-fg3 leading-[1.5]">Use as an in-widget status row. Distinct from the budget/gate footer in Settings (which is also red-tint but uses the row pattern, not a banner).</p>
+    </div>
+  </div>
+
+  <!-- Skeleton + Spinner -->
+  <div class="specimen-grid mb-12">
+    <div class="specimen">
+      <div class="flex flex-col gap-4 items-center">
+        <div class="flex items-center gap-3">
+          <div class="wc-skeleton wc-skeleton--circle" style="width: 40px; height: 40px"></div>
+          <div class="wc-skeleton-group" style="width: 160px">
+            <div class="wc-skeleton" style="height: 12px; width: 100%"></div>
+            <div class="wc-skeleton" style="height: 12px; width: 60%"></div>
+          </div>
+        </div>
+        <div class="wc-skeleton" style="width: 200px; height: 64px"></div>
+        <span class="wc-spinner"></span>
+      </div>
+    </div>
+    <div>
+      <div class="anno mb-1"><span class="text-fg1 font-mono">Skeleton · Spinner</span></div>
+      <p class="text-[13px] text-fg2 leading-[1.55] mb-2">
+        Skeleton has three variants — <code class="code">text</code> (n lines, last 60% wide), <code class="code">circle</code> (40×40), <code class="code">block</code> (full × 64px). Spinner is 18px default, accent-on-elevated ring.
+      </p>
+      <p class="text-[12px] text-fg3 leading-[1.5]">Both share the shimmer keyframes and the same <code class="code">--bg-card-elevated → --bg-hover → --bg-card-elevated</code> gradient — a single visual language for "we're working on it".</p>
+    </div>
+  </div>
+
+  <!-- ─── Next steps ─── -->
+  <div class="audit-card" style="border-color: rgba(10,132,255,0.25); background: linear-gradient(180deg, rgba(10,132,255,0.05), transparent)">
+    <div class="anno mb-3 text-accent">Next steps · pick any</div>
+    <ul class="text-[13px] text-fg2 leading-[1.7] list-disc pl-5 space-y-1.5">
+      <li><strong class="text-fg1 font-semibold">Token the tones.</strong> Add the seven <code class="code">--tone-*</code> entries to <code class="code">colors_and_type.css</code> and rewrite <code class="code">primitives.css</code> to consume them. ~15 lines of CSS in two files. I can do this now if you say go.</li>
+      <li><strong class="text-fg1 font-semibold">Add <code class="code">preview/widget-primitives-extras.html</code></strong> covering the eight new primitives + a Card-tones row. Same look as <code class="code">widget-primitives.html</code> — just a fourth column of cards.</li>
+      <li><strong class="text-fg1 font-semibold">Decide on <code class="code">warm</code> / <code class="code">cool</code> / <code class="code">night</code>.</strong> They're really weather/time-of-day backdrops, not status tones. Two options: rename them on the prop, or split into a second <code class="code">backdrop</code> prop. Worth a 5-min call.</li>
+      <li><strong class="text-fg1 font-semibold">Backfill weather conditions.</strong> <code class="code">preview/weather-conditions.html</code> has 8; the component has 12. Add <em class="text-fg1 not-italic">partly-cloudy</em>, <em class="text-fg1 not-italic">night-cloudy</em>, <em class="text-fg1 not-italic">snow</em>, <em class="text-fg1 not-italic">fog</em> tiles.</li>
+    </ul>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body></html>

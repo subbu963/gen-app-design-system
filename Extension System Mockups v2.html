@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>gen-app DS · Extension system follow-ups</title>
+<link rel="stylesheet" href="colors_and_type.css" />
+<script src="tailwind.js"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-base); color: var(--fg1); font-family: var(--font-sans); }
+  /* Shared atoms (lifted from settings-extensions.html and extension-runtime-detail.html). */
+  .kind-chip, .rt-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 6px; border-radius: 999px; font-family: var(--font-mono); font-size: 9.5px; font-weight: 600; letter-spacing: 0.02em; }
+  .kind-bundled { background: var(--bg-card-elevated); color: var(--fg2); border: 1px solid var(--stroke-soft); }
+  .kind-user    { background: var(--tint-purple); color: var(--color-purple); }
+  .kind-npm     { background: rgba(255,159,10,0.14); color: var(--color-orange); }
+  .kind-http    { background: var(--color-accent-tint); color: var(--color-accent); }
+  .kind-mcp     { background: var(--bg-card-elevated); color: var(--fg2); border: 1px solid var(--stroke-soft); }
+  .rt-worker { background: var(--bg-card-elevated); color: var(--fg2); border: 1px solid var(--stroke-soft); }
+  .rt-deno   { background: rgba(48,209,88,0.14); color: var(--color-green); }
+  .rt-child  { background: rgba(94,92,230,0.18); color: var(--color-indigo); }
+  .pdot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .pdot.running { background: var(--color-green); box-shadow: 0 0 0 0 rgba(48,209,88,0.45); animation: pulse 2s ease-out infinite; }
+  .pdot.idle    { background: var(--fg3); }
+  .pdot.stopped { background: var(--fg4); }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(48,209,88,0.55); } 70% { box-shadow: 0 0 0 6px rgba(48,209,88,0); } 100% { box-shadow: 0 0 0 0 rgba(48,209,88,0); } }
+  .anno { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; color: var(--fg3); }
+  .toggle { width: 32px; height: 18px; border-radius: 9px; background: var(--fg4); position: relative; flex-shrink: 0; }
+  .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: 200ms; }
+  .toggle.on { background: var(--color-green); }
+  .toggle.on::after { left: 16px; }
+  .host { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 4px; background: var(--bg-card-elevated); font-family: var(--font-mono); font-size: 10.5px; color: var(--fg2); border: 1px solid var(--stroke-soft); }
+  /* Pros / cons mini-blocks for the MCP card. */
+  .pro { color: var(--color-green); }
+  .con { color: var(--color-orange); }
+  /* Make sure tailwind utilities for our custom tokens render. */
+  .text-fg1 { color: var(--fg1); } .text-fg2 { color: var(--fg2); } .text-fg3 { color: var(--fg3); } .text-fg4 { color: var(--fg4); }
+  .bg-card { background: var(--bg-card); } .bg-card-elevated { background: var(--bg-card-elevated); } .bg-window { background: var(--bg-window); }
+  .border-hairline { border-color: var(--stroke-hairline); } .border-soft { border-color: var(--stroke-soft); }
+  .text-accent { color: var(--color-accent); } .bg-accent { background: var(--color-accent); }
+  .bg-accent-tint { background: var(--color-accent-tint); }
+  .text-green { color: var(--color-green); } .text-orange { color: var(--color-orange); } .text-red { color: var(--color-red); } .text-yellow { color: var(--color-yellow); } .text-purple { color: var(--color-purple); } .text-cyan { color: var(--color-cyan); } .text-indigo { color: var(--color-indigo); }
+  .bg-tint-orange { background: rgba(255,159,10,0.14); }
+  /* Mini bar */
+  .bar { position: relative; height: 4px; border-radius: 2px; background: var(--bg-card-elevated); overflow: hidden; }
+  .bar .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--color-accent); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard, DCPostIt } = window;
+
+/* ───── helpers ───── */
+function I({n, c=''}) { return <i data-lucide={n} className={c}></i>; }
+function Chip({cls, children}) { return <span className={`kind-chip ${cls}`}>{children}</span>; }
+function RChip({cls, children}) { return <span className={`rt-chip ${cls}`}>{children}</span>; }
+function Dot({state}) { return <span className={`pdot ${state}`}></span>; }
+function Anno({children}) { return <div className="anno">{children}</div>; }
+
+/* ───── 1. New extension — simple runtime chooser (matches RuntimeChooserSheet.tsx in the repo) ───── */
+function RuntimeChooserSheet() {
+  const Row = ({ icon, iconColor, title, body, runtime }) => (
+    <button type="button" className="flex items-start gap-3 p-3 rounded-[10px] text-left cursor-pointer w-full" style={{ background: 'var(--bg-card)', border: '1px solid var(--stroke-soft)' }}>
+      <div className="w-8 h-8 rounded-[8px] inline-flex items-center justify-center shrink-0 bg-card-elevated">
+        <I n={icon} c={`w-4 h-4 ${iconColor}`} />
+      </div>
+      <div className="flex-1 min-w-0 flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <div className="text-[14px] font-semibold text-fg1">{title}</div>
+          <RChip cls={runtime === 'deno' ? 'rt-deno' : 'rt-worker'}>{runtime}</RChip>
+        </div>
+        <div className="text-[11.5px] text-fg2 leading-[1.5]">{body}</div>
+      </div>
+      <I n="chevron-right" c="w-4 h-4 text-fg3 mt-1" />
+    </button>
+  );
+
+  return (
+    <div className="w-full h-full p-5 flex flex-col gap-3" style={{ background: 'var(--bg-window)' }}>
+      <div className="flex items-center justify-between">
+        <div className="text-[15px] font-semibold text-fg1">New extension</div>
+        <I n="x" c="w-4 h-4 text-fg3 cursor-pointer" />
+      </div>
+      <p className="text-[12px] text-fg2 leading-[1.55]">
+        Both runtimes live as folders on disk under <code className="font-mono text-[11px]">~/Library/.../extensions/&lt;id&gt;/</code>. Pick the runtime that fits — you can't swap later without re-creating.
+      </p>
+
+      <div className="flex flex-col gap-2 pt-1">
+        <Row
+          icon="puzzle"
+          iconColor="text-purple"
+          title="Worker"
+          runtime="worker"
+          body={<>ESM authored across one or more <code className="font-mono">.js</code> files, bundled into the sandbox worker at install time via esbuild. Capability-gated <code className="font-mono">ctx.fetch</code>, <code className="font-mono">ctx.secrets</code>, <code className="font-mono">ctx.storage</code>. Works on iOS and desktop.</>}
+        />
+        <Row
+          icon="globe"
+          iconColor="text-cyan"
+          title="Deno"
+          runtime="deno"
+          body={<>TypeScript-native, long-lived <code className="font-mono">deno run</code> subprocess with sandbox flags. Real Node-compat (<code className="font-mono">npm:</code> imports, <code className="font-mono">node:sqlite</code>, PGlite, Redka). Outbound network gated by a per-extension HTTP proxy. Desktop only.</>}
+        />
+      </div>
+
+      <div className="flex-1"></div>
+
+      <div className="flex justify-end pt-1">
+        <button className="text-[12px] font-semibold py-1.5 px-3 rounded-full border text-fg2 bg-transparent cursor-pointer" style={{ borderColor: 'var(--stroke-soft)' }}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+/* ───── 2. Worker iOS hint — meta-line footnote (variant B) ───── */
+function WorkerHintArtboard() {
+  const row = ({ name, icon, iconColor, kind, meta }) => (
+    <div className="flex items-center gap-3 px-3.5 py-2.5 border-b border-hairline">
+      <div className="w-7 h-7 rounded-md inline-flex items-center justify-center shrink-0 bg-card-elevated">
+        <I n={icon} c={`w-3.5 h-3.5 ${iconColor}`} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="text-[13px] text-fg1">{name}</div>
+          <Chip cls={`kind-${kind.cls}`}>{kind.label}</Chip>
+          <RChip cls="rt-worker">worker</RChip>
+        </div>
+        <div className="text-[11px] text-fg2 mt-0.5">{meta}</div>
+      </div>
+      <button className="text-fg2 p-1 bg-transparent border-none cursor-pointer"><I n="pencil" c="w-3.5 h-3.5" /></button>
+      <div className="toggle on"></div>
+    </div>
+  );
+
+  return (
+    <div className="w-full h-full p-5 flex flex-col gap-4" style={{ background: 'var(--bg-window)' }}>
+      <div>
+        <div className="text-[13px] font-semibold text-fg1">Worker rows — meta-line footnote</div>
+        <div className="text-[11.5px] text-fg2 mt-0.5 leading-[1.5]">Run-mode lives in the existing meta line, never in a separate chip. <code className="font-mono">· iOS-safe</code> appears between the existing meta and timestamp. Cheapest, scannable, doesn't shout "legacy" while worker is still the only iOS path.</div>
+      </div>
+
+      <div>
+        <Anno>List in context</Anno>
+        <div className="bg-card rounded-[10px] overflow-hidden mt-1.5" style={{ border: '1px solid var(--stroke-soft)' }}>
+          {row({
+            name: 'RSS',
+            icon: 'rss',
+            iconColor: 'text-purple',
+            kind: { cls: 'user', label: 'user · draft' },
+            meta: <>Subscribe + summarise feeds <span className="text-fg3">· iOS-safe</span> · last edited 2h ago</>
+          })}
+          {row({
+            name: 'Hacker News',
+            icon: 'newspaper',
+            iconColor: 'text-orange',
+            kind: { cls: 'user', label: 'user · v0.3' },
+            meta: <>Top stories · 1 provider <span className="text-fg3">· iOS-safe</span></>
+          })}
+          {/* Reference: a deno row — no footnote, since deno is desktop-only */}
+          <div className="flex items-center gap-3 px-3.5 py-2.5">
+            <div className="w-7 h-7 rounded-md inline-flex items-center justify-center shrink-0 bg-card-elevated">
+              <I n="cloud-sun" c="w-3.5 h-3.5 text-yellow" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="text-[13px] text-fg1">Open-Meteo</div>
+                <Chip cls="kind-bundled">bundled · v2.1.0</Chip>
+                <RChip cls="rt-deno">deno</RChip>
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono text-fg2"><Dot state="running" />running</span>
+              </div>
+              <div className="text-[11px] text-fg2 mt-0.5">Weather forecasts · 16-day · 4 providers</div>
+            </div>
+            <div className="toggle on"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <Anno>Copywriting rule</Anno>
+        <div className="text-[11.5px] text-fg2 mt-1.5 leading-[1.6]">
+          Worker rows: append <code className="font-mono">· iOS-safe</code> to the meta line, never as a chip. Deno rows: no footnote (desktop is the default; the runtime chip + status dot do the work). MCP rows: no footnote (different sandbox entirely). The rule is <strong className="text-fg1 font-semibold">only worker rows get the meta hint</strong>.
+        </div>
+      </div>
+
+      <div className="flex-1"></div>
+
+      <div className="rounded-[10px] p-3 flex items-start gap-2.5" style={{ background: 'var(--bg-card)', border: '1px solid var(--stroke-soft)' }}>
+        <I n="check-circle-2" c="w-3.5 h-3.5 text-green shrink-0 mt-0.5" />
+        <div className="text-[11px] text-fg2 leading-[1.55]">
+          Locked: meta-line footnote. Revisit if/when worker becomes truly legacy — a faded row + info dot would be the next step.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ───── 3. MCP × runtime — locked on B (add child chip on stdio rows) ───── */
+function McpRefinementArtboard() {
+  const mcpRow = ({ name, icon, iconColor, kind, pkg, tools, runtime, status }) => (
+    <div className="flex items-center gap-3 px-3.5 py-2.5 border-b border-hairline">
+      <div className="w-7 h-7 rounded-md inline-flex items-center justify-center shrink-0 bg-card-elevated">
+        <I n={icon} c={`w-3.5 h-3.5 ${iconColor}`} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="text-[13px] text-fg1">{name}</div>
+          <Chip cls={`kind-${kind.cls}`}>{kind.label}</Chip>
+          {runtime && <RChip cls="rt-child">child</RChip>}
+          {status && <span className="inline-flex items-center gap-1 text-[10px] font-mono text-fg2"><Dot state="running" />{status}</span>}
+        </div>
+        <div className="text-[11px] text-fg2 mt-0.5 flex items-center gap-1.5">
+          <span className="font-mono">{pkg}</span>
+          <span className="text-fg4">·</span>
+          <span>{tools}</span>
+        </div>
+      </div>
+      <I n="chevron-right" c="w-3.5 h-3.5 text-fg3" />
+      <div className="toggle on"></div>
+    </div>
+  );
+
+  return (
+    <div className="w-full h-full p-5 flex flex-col gap-4" style={{ background: 'var(--bg-window)' }}>
+      <div>
+        <div className="text-[13px] font-semibold text-fg1">MCP rows — add a <code className="font-mono">child</code> chip on stdio</div>
+        <div className="text-[11.5px] text-fg2 mt-0.5 leading-[1.5]">Stdio MCP servers are child processes the host owns — same vocabulary as a deno extension. HTTP MCP servers aren't (they're remote), so they stay one-chip.</div>
+      </div>
+
+      <div>
+        <Anno>Mixed list — stdio + http + deno</Anno>
+        <div className="bg-card rounded-[10px] overflow-hidden mt-1.5" style={{ border: '1px solid var(--stroke-soft)' }}>
+          {mcpRow({
+            name: 'Filesystem',
+            icon: 'package',
+            iconColor: 'text-orange',
+            kind: { cls: 'npm', label: 'npm · stdio' },
+            pkg: '@modelcontextprotocol/server-filesystem',
+            tools: '3 tools',
+            runtime: true,
+            status: 'running'
+          })}
+          {mcpRow({
+            name: 'Linear',
+            icon: 'globe',
+            iconColor: 'text-accent',
+            kind: { cls: 'http', label: 'http · oauth' },
+            pkg: 'mcp.linear.app/sse',
+            tools: '11 tools',
+            runtime: false,
+            status: null
+          })}
+          {/* Reference deno row for vocabulary check */}
+          <div className="flex items-center gap-3 px-3.5 py-2.5">
+            <div className="w-7 h-7 rounded-md inline-flex items-center justify-center shrink-0 bg-card-elevated">
+              <I n="cloud-sun" c="w-3.5 h-3.5 text-yellow" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="text-[13px] text-fg1">Open-Meteo</div>
+                <Chip cls="kind-bundled">bundled · v2.1.0</Chip>
+                <RChip cls="rt-deno">deno</RChip>
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono text-fg2"><Dot state="running" />running</span>
+              </div>
+              <div className="text-[11px] text-fg2 mt-0.5">Weather forecasts · 16-day · 4 providers</div>
+            </div>
+            <div className="toggle on"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <Anno>The rule</Anno>
+        <div className="text-[11.5px] text-fg2 mt-1.5 leading-[1.6]">
+          <strong className="text-fg1 font-semibold">Every row whose code the host hosts gets a runtime chip.</strong> Deno extensions and stdio MCP servers do. Worker extensions do (<code className="font-mono">worker</code>). HTTP MCP servers don't — they're remote. The runtime chip is always second, after the kind chip, and pairs with a process-status dot when a process is running.
+        </div>
+      </div>
+
+      <div className="flex-1"></div>
+
+      <div className="rounded-[10px] p-3 flex items-start gap-2.5" style={{ background: 'var(--bg-card)', border: '1px solid var(--stroke-soft)' }}>
+        <I n="check-circle-2" c="w-3.5 h-3.5 text-green shrink-0 mt-0.5" />
+        <div className="text-[11px] text-fg2 leading-[1.55]">
+          Locked: <code className="font-mono">child</code> chip (indigo) on every stdio row. HTTP rows stay one-chip. Will land in the next preview pass.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ───── 5. Settings → About ───── */
+function AboutPanel() {
+  const kv = (k, v, mono=true) => (
+    <div className="flex items-center justify-between py-2 px-3.5 border-b border-hairline">
+      <div className="text-[12.5px] text-fg2">{k}</div>
+      <div className={`text-[12px] ${mono ? 'font-mono' : ''} text-fg1`}>{v}</div>
+    </div>
+  );
+  return (
+    <div className="w-full h-full p-5 flex flex-col gap-4" style={{ background: 'var(--bg-window)' }}>
+      <div className="flex flex-col gap-1">
+        <div className="text-[11px] text-fg3 font-mono uppercase tracking-[0.06em] flex items-center gap-1.5">
+          <I n="info" c="w-3 h-3" /> Settings → About
+        </div>
+        <div className="text-[18px] font-semibold text-fg1 -tracking-[0.022em]">gen-app</div>
+        <div className="text-[12px] text-fg2">A chat that builds widgets. <span className="text-fg3">Built on Tauri.</span></div>
+      </div>
+
+      {/* App identity card */}
+      <div className="bg-card rounded-[12px] overflow-hidden" style={{ border: '1px solid var(--stroke-soft)' }}>
+        {kv('Version', '0.6.3 (build 1842)')}
+        {kv('Channel', 'beta')}
+        {kv('Updates', <span className="flex items-center gap-1.5"><span className="pdot running" style={{ width: 6, height: 6 }}></span>Up to date · checked 12m ago</span>, false)}
+        <div className="flex items-center justify-between py-2 px-3.5">
+          <div className="text-[12.5px] text-fg2">Release notes</div>
+          <a className="text-[12px] text-accent">CHANGELOG.md</a>
+        </div>
+      </div>
+
+      {/* Runtime card */}
+      <div>
+        <Anno>Runtime</Anno>
+        <div className="bg-card rounded-[12px] overflow-hidden mt-1.5" style={{ border: '1px solid var(--stroke-soft)' }}>
+          <div className="flex items-center justify-between py-2 px-3.5 border-b border-hairline">
+            <div className="text-[12.5px] text-fg2">Deno sandbox</div>
+            <div className="flex items-center gap-2">
+              <RChip cls="rt-deno">deno · v2.1.4</RChip>
+              <span className="text-[11px] font-mono text-fg3">aarch64-apple-darwin</span>
+            </div>
+          </div>
+          {kv('Tauri', 'v2.1.0')}
+          {kv('llama.cpp', 'b3892 · built-in')}
+          {kv('Claude CLI', '0.9.2 · ~/.local/bin/claude', true)}
+        </div>
+      </div>
+
+      {/* Data + actions */}
+      <div>
+        <Anno>Data</Anno>
+        <div className="bg-card rounded-[12px] overflow-hidden mt-1.5" style={{ border: '1px solid var(--stroke-soft)' }}>
+          <div className="flex items-center justify-between py-2.5 px-3.5 border-b border-hairline">
+            <div className="flex flex-col gap-0.5">
+              <div className="text-[12.5px] text-fg1">App data</div>
+              <div className="text-[10.5px] font-mono text-fg3">~/Library/Application Support/com.genapp.desktop</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="text-[11px] font-mono text-fg2">38 MB</div>
+              <button className="text-fg2 p-1.5 rounded bg-card-elevated border-none cursor-pointer"><I n="folder-open" c="w-3.5 h-3.5" /></button>
+            </div>
+          </div>
+          <div className="flex items-center justify-between py-2.5 px-3.5 border-b border-hairline">
+            <div className="flex flex-col gap-0.5">
+              <div className="text-[12.5px] text-fg1">Extensions cache</div>
+              <div className="text-[10.5px] font-mono text-fg3">extensions/ · 3 deno · 1 worker</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="text-[11px] font-mono text-fg2">216 MB</div>
+              <button className="text-fg2 p-1.5 rounded bg-card-elevated border-none cursor-pointer"><I n="folder-open" c="w-3.5 h-3.5" /></button>
+            </div>
+          </div>
+          <div className="flex items-center justify-between py-2.5 px-3.5">
+            <div className="flex flex-col gap-0.5">
+              <div className="text-[12.5px] text-fg1">Logs</div>
+              <div className="text-[10.5px] font-mono text-fg3">gen-app-logs.db · 14,820 events</div>
+            </div>
+            <button className="text-[11.5px] font-semibold py-1 px-2.5 rounded-full text-accent bg-accent-tint border-none cursor-pointer flex items-center gap-1.5">
+              <I n="download" c="w-3 h-3" /> Export .zip
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Open-source licenses */}
+      <div>
+        <Anno>Open-source licenses</Anno>
+        <div className="bg-card rounded-[12px] overflow-hidden mt-1.5" style={{ border: '1px solid var(--stroke-soft)' }}>
+          {[
+            ['Deno', 'MIT', 'denoland/deno', 'deno'],
+            ['Tauri', 'MIT / Apache-2.0', 'tauri-apps/tauri', null],
+            ['React', 'MIT', 'facebook/react', null],
+            ['llama.cpp', 'MIT', 'ggerganov/llama.cpp', null],
+            ['Lucide icons', 'ISC', 'lucide-icons/lucide', null],
+            ['Konsta UI', 'MIT', 'konstaui/konsta', null],
+            ['SQLite', 'Public domain', 'sqlite.org', null],
+            ['Diesel', 'MIT / Apache-2.0', 'diesel-rs/diesel', null],
+          ].map(([name, license, repo, runtime], i, arr) => (
+            <div key={name} className={`flex items-center gap-3 py-2 px-3.5 ${i < arr.length - 1 ? 'border-b border-hairline' : ''}`}>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <div className="text-[12.5px] text-fg1">{name}</div>
+                  {runtime === 'deno' && <RChip cls="rt-deno">runtime</RChip>}
+                </div>
+                <div className="text-[10.5px] font-mono text-fg3 truncate">{repo}</div>
+              </div>
+              <span className="text-[10.5px] font-mono text-fg2 px-1.5 py-0.5 rounded" style={{ background: 'var(--bg-card-elevated)' }}>{license}</span>
+              <button className="text-fg2 p-1.5 rounded bg-transparent border-none cursor-pointer" title="View license"><I n="external-link" c="w-3 h-3" /></button>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center justify-between mt-2 px-1">
+          <div className="text-[10.5px] text-fg3">Showing 8 of 184 dependencies</div>
+          <a className="text-[11px] text-accent cursor-pointer flex items-center gap-1"><I n="file-text" c="w-3 h-3" />Full notice (THIRD_PARTY_NOTICES.md)</a>
+        </div>
+      </div>
+
+      <div className="flex-1"></div>
+
+      {/* Footer actions */}
+      <div className="flex items-center gap-2 pt-1">
+        <button className="text-[11.5px] font-semibold py-1.5 px-3 rounded-full border text-fg1 bg-card-elevated cursor-pointer flex items-center gap-1.5" style={{ borderColor: 'var(--stroke-soft)' }}>
+          <I n="rotate-cw" c="w-3 h-3" /> Check for updates
+        </button>
+        <button className="text-[11.5px] font-semibold py-1.5 px-3 rounded-full text-fg2 bg-transparent cursor-pointer" style={{ border: '1px solid var(--stroke-soft)' }}>
+          Copy diagnostics
+        </button>
+        <span className="flex-1"></span>
+        <span className="text-[10.5px] text-fg3 font-mono">© 2026 · MIT</span>
+      </div>
+    </div>
+  );
+}
+
+/* ───── Canvas root ───── */
+function App() {
+  React.useEffect(() => {
+    const tick = () => window.lucide && window.lucide.createIcons();
+    tick();
+    const t = setInterval(tick, 250);
+    setTimeout(() => clearInterval(t), 4000);
+  }, []);
+
+  return (
+    <DesignCanvas title="Extension system follow-ups · 0.7.0 → next" subtitle="Mockups for the four open items">
+      <DCSection id="authoring" title="1 · New extension — runtime chooser" subtitle="Simple two-row picker. Matches RuntimeChooserSheet.tsx in the repo.">
+        <DCArtboard id="chooser" label="RuntimeChooserSheet" width={520} height={460}>
+          <RuntimeChooserSheet />
+        </DCArtboard>
+        <DCPostIt>
+          Synced to the repo: two big rows, pick a runtime, then route into ExtensionFolderEditor with the picked runtime's starter templates. Permissions / identity / network allowlist all move into the editor.
+        </DCPostIt>
+      </DCSection>
+
+      <DCSection id="legacy-hint" title="2 · Worker iOS hint" subtitle="Meta-line footnote (option B — locked).">
+        <DCArtboard id="worker-hint" label="Worker rows in list" width={620} height={520}>
+          <WorkerHintArtboard />
+        </DCArtboard>
+        <DCPostIt>
+          Only worker rows get the <code>· iOS-safe</code> footnote on the meta line. Deno and MCP rows stay clean.
+        </DCPostIt>
+      </DCSection>
+
+      <DCSection id="mcp" title="3 · MCP × runtime chip" subtitle="Add the indigo `child` chip to stdio rows (option B — locked).">
+        <DCArtboard id="mcp-chip" label="Mixed list" width={620} height={520}>
+          <McpRefinementArtboard />
+        </DCArtboard>
+        <DCPostIt>
+          Rule: every row whose code the host hosts gets a runtime chip. Stdio MCP gets <code>child</code>; HTTP MCP doesn't.
+        </DCPostIt>
+      </DCSection>
+
+      <DCSection id="about" title="5 · Settings → About + licenses" subtitle="App version, runtime versions, data folders, and the open-source notice list.">
+        <DCArtboard id="about-panel" label="Settings → About · desktop" width={560} height={1180}>
+          <AboutPanel />
+        </DCArtboard>
+        <DCPostIt>
+          Licenses live in About, not their own section. List shows the top 8 by visibility + a link to the full THIRD_PARTY_NOTICES.md. The runtime row carries a tiny <code>runtime</code> chip so users can find the deno version both here and at the top of the panel.
+        </DCPostIt>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

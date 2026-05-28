@@ -1,0 +1,106 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>MCP tools sheet</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="../tailwind.js"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  body { background: var(--bg-base); font-family: var(--font-sans); color: var(--fg1); }
+  pre.spec { font-family: var(--font-mono); font-size: 11px; line-height: 1.55; color: var(--fg2); background: var(--bg-base); padding: 9px 11px; border-radius: 6px; margin: 0; overflow: auto; }
+  pre.spec .k  { color: var(--color-cyan); }
+  pre.spec .s  { color: var(--color-green); }
+  pre.spec .n  { color: var(--color-orange); }
+  pre.spec .c  { color: var(--fg3); font-style: italic; }
+</style>
+</head>
+<body class="p-7 flex flex-col gap-5 min-h-screen">
+
+  <div class="flex flex-col gap-1 max-w-[720px]">
+    <div class="text-[11px] text-fg3 font-mono uppercase tracking-[0.06em] flex items-center gap-1.5">
+      <i data-lucide="list-tree" class="w-3 h-3"></i> View tools · Settings → Extensions → ⋯
+    </div>
+    <h1 class="text-[26px] font-semibold -tracking-[0.022em] leading-[1.15]">What this MCP server exposes</h1>
+    <p class="text-[13px] text-fg2 leading-[1.55] mt-1">A drill-in sheet from an MCP row. Lists every synthesized provider with its description and JSON-Schema input. The pretty-printed spec block is reusable — same atom carries Glue's <em class="text-fg1 not-italic">Live spec</em> tab and any future schema view.</p>
+  </div>
+
+  <!-- Sheet -->
+  <div class="self-center w-[640px] max-w-full flex flex-col bg-window border border-soft rounded-[18px] overflow-hidden" style="box-shadow: var(--elev-3); height: 620px">
+
+    <!-- Header -->
+    <div class="flex items-center gap-2.5 border-b border-hairline px-4 py-3 bg-card">
+      <i data-lucide="package" class="w-4 h-4 text-fg2"></i>
+      <div class="min-w-0 flex-1">
+        <div class="text-[13px] font-semibold text-fg1">@modelcontextprotocol/server-filesystem</div>
+        <div class="font-mono text-[11px] text-fg2">mcp.modelcontextprotocol-server-filesystem · 3 tools</div>
+      </div>
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-tint-green text-green text-[10px] font-semibold">
+        <span class="w-1 h-1 rounded-full bg-green"></span>running
+      </span>
+      <button class="text-fg2 cursor-pointer bg-transparent border-none p-1 rounded-md hover:bg-white/[0.04]"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+    </div>
+
+    <!-- Tools list -->
+    <div class="flex-1 overflow-y-auto bg-base p-3 flex flex-col gap-2.5">
+
+      <div class="rounded-md border border-soft bg-card p-3">
+        <div class="flex items-center gap-2">
+          <div class="font-mono text-[13px] font-semibold text-fg1">read_file</div>
+          <span class="text-[10px] font-mono text-fg3 ml-auto">required: path</span>
+        </div>
+        <div class="text-[12px] leading-[1.5] text-fg2 mt-1">Read the contents of a file from the allowed directory. Returns up to 5 MB.</div>
+        <pre class="spec mt-2"><span class="c">// json-schema · ctx.useQuery('mcp.filesystem', 'read_file', { … })</span>
+{
+  <span class="k">"type"</span>: <span class="s">"object"</span>,
+  <span class="k">"properties"</span>: {
+    <span class="k">"path"</span>: { <span class="k">"type"</span>: <span class="s">"string"</span>, <span class="k">"description"</span>: <span class="s">"Absolute path inside the sandbox."</span> }
+  },
+  <span class="k">"required"</span>: [<span class="s">"path"</span>]
+}</pre>
+      </div>
+
+      <div class="rounded-md border border-soft bg-card p-3">
+        <div class="flex items-center gap-2">
+          <div class="font-mono text-[13px] font-semibold text-fg1">write_file</div>
+          <span class="text-[10px] font-mono text-fg3 ml-auto">required: path, content</span>
+        </div>
+        <div class="text-[12px] leading-[1.5] text-fg2 mt-1">Create or overwrite a file in the allowed directory.</div>
+        <pre class="spec mt-2">{
+  <span class="k">"type"</span>: <span class="s">"object"</span>,
+  <span class="k">"properties"</span>: {
+    <span class="k">"path"</span>:    { <span class="k">"type"</span>: <span class="s">"string"</span> },
+    <span class="k">"content"</span>: { <span class="k">"type"</span>: <span class="s">"string"</span>, <span class="k">"description"</span>: <span class="s">"UTF-8 contents."</span> }
+  },
+  <span class="k">"required"</span>: [<span class="s">"path"</span>, <span class="s">"content"</span>]
+}</pre>
+      </div>
+
+      <div class="rounded-md border border-soft bg-card p-3">
+        <div class="flex items-center gap-2">
+          <div class="font-mono text-[13px] font-semibold text-fg1">list_directory</div>
+          <span class="text-[10px] font-mono text-fg3 ml-auto">required: path</span>
+        </div>
+        <div class="text-[12px] leading-[1.5] text-fg2 mt-1">List immediate children of a directory.</div>
+        <pre class="spec mt-2">{
+  <span class="k">"type"</span>: <span class="s">"object"</span>,
+  <span class="k">"properties"</span>: {
+    <span class="k">"path"</span>:      { <span class="k">"type"</span>: <span class="s">"string"</span> },
+    <span class="k">"recursive"</span>: { <span class="k">"type"</span>: <span class="s">"boolean"</span>, <span class="k">"default"</span>: <span class="n">false</span> }
+  },
+  <span class="k">"required"</span>: [<span class="s">"path"</span>]
+}</pre>
+      </div>
+    </div>
+
+    <!-- Footer hint -->
+    <div class="border-t border-hairline px-4 py-2.5 flex items-center gap-2 bg-card">
+      <i data-lucide="info" class="w-3.5 h-3.5 text-fg3 shrink-0"></i>
+      <span class="text-[11px] text-fg2 leading-[1.4]">
+        Tools become harness providers — call from a glue widget with
+        <code class="font-mono text-fg1">ctx.useQuery('mcp.filesystem', '&lt;tool&gt;', args)</code>.
+      </span>
+      <button class="ml-auto text-[12px] font-semibold py-1.5 px-3 rounded-full border border-soft text-fg1 bg-card-elevated cursor-pointer">Close</button>
+    </div>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body></html>

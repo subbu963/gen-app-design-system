@@ -2,7 +2,7 @@
 name: gen-app-design
 description: Use this skill to generate well-branded interfaces and assets for gen-app, either for production or throwaway prototypes/mocks/etc. Contains essential design guidelines, colors, type, fonts, assets, and UI kit components for prototyping a Tauri v2 desktop + iOS LLM-widgets-on-a-canvas app.
 user-invocable: true
-version: 0.5.0
+version: 0.7.0
 ---
 
 # gen-app design skill
@@ -45,3 +45,4 @@ These were assumed from the spec, not specified by the user. Treat them as defau
 - **Symbols.** Rendered as glyph-prefixed colored tags (e.g. `# market`); the spec mentions "symbols" but their structural semantics are unclear.
 - **iOS chat dock behaviour.** Two variants shipped (Dock A / Tab B); user choice pending.
 - **Tone — "playful".** Calibrated to Arc / Things references. Tighten or loosen as needed.
+- **Extension runtimes.** Two sandboxes coexist — `worker` (in-webview, iOS-safe) and `deno` (subprocess, desktop-only). The kind chip carries authorship; the runtime chip carries the sandbox. When mocking a new extension flow, **never suggest `deno` on iOS** — soft-disable with the iOS rationale block instead (see `preview/extension-runtime-detail.html`). See README § Extension runtimes for the full table.

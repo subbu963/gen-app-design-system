@@ -1,0 +1,343 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>Extension runtime detail · gen-app DS</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="../tailwind.js"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  body { background: var(--bg-base); font-family: var(--font-sans); color: var(--fg1); }
+  .anno { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; color: var(--fg3); }
+
+  /* Runtime chip — same vocabulary as kind chips, gray (worker) vs green (deno). */
+  .rt-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 6px; border-radius: 999px; font-family: var(--font-mono); font-size: 9.5px; font-weight: 600; letter-spacing: 0.02em; }
+  .rt-worker { background: var(--bg-card-elevated); color: var(--fg2); border: 1px solid var(--stroke-soft); }
+  .rt-deno   { background: rgba(48,209,88,0.14); color: var(--color-green); }
+
+  /* Process status dot — pulses while running. */
+  .pdot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .pdot.running { background: var(--color-green); box-shadow: 0 0 0 0 rgba(48,209,88,0.45); animation: pulse 2s ease-out infinite; }
+  .pdot.idle    { background: var(--fg3); }
+  .pdot.stopped { background: var(--fg4); }
+  .pdot.crashed { background: var(--color-red); }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(48,209,88,0.55); } 70% { box-shadow: 0 0 0 6px rgba(48,209,88,0); } 100% { box-shadow: 0 0 0 0 rgba(48,209,88,0); } }
+
+  /* Small mono key/val rows. */
+  .kv { display: grid; grid-template-columns: 88px 1fr; row-gap: 6px; column-gap: 12px; font-family: var(--font-mono); font-size: 11px; }
+  .kv dt { color: var(--fg3); }
+  .kv dd { color: var(--fg1); margin: 0; }
+
+  /* Allowlist host pill. */
+  .host { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 4px; background: var(--bg-card-elevated); font-family: var(--font-mono); font-size: 10.5px; color: var(--fg2); border: 1px solid var(--stroke-soft); }
+
+  /* Stderr feed lines. */
+  .log-row { display: grid; grid-template-columns: 64px 36px 1fr; gap: 8px; font-family: var(--font-mono); font-size: 10.5px; line-height: 1.55; padding: 3px 8px; }
+  .log-row .ts { color: var(--fg4); }
+  .log-row .lvl { font-weight: 600; }
+  .log-row.info .lvl { color: var(--color-accent); }
+  .log-row.warn .lvl { color: var(--color-orange); }
+  .log-row.err  .lvl { color: var(--color-red); }
+  .log-row .msg { color: var(--fg2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Idle-stop slider track — purely visual. */
+  .slider { position: relative; height: 4px; border-radius: 2px; background: var(--bg-card-elevated); }
+  .slider .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: var(--color-accent); }
+  .slider .thumb { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; background: white; border: 1px solid var(--stroke-soft); transform: translate(-50%, -50%); box-shadow: var(--elev-1); }
+
+  /* Mini disk-usage bar. */
+  .bar { position: relative; height: 4px; border-radius: 2px; background: var(--bg-card-elevated); overflow: hidden; }
+  .bar .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--color-accent); }
+</style>
+</head>
+<body class="p-6 flex flex-col gap-6 min-h-screen">
+
+  <div class="flex flex-col gap-1 max-w-[720px]">
+    <div class="text-[11px] text-fg3 font-mono uppercase tracking-[0.06em] flex items-center gap-1.5">
+      <i data-lucide="puzzle" class="w-3 h-3"></i> Settings → Extensions → <span class="text-fg2">Open-Meteo</span>
+    </div>
+    <h1 class="text-[22px] font-semibold -tracking-[0.022em] leading-[1.15]">Deno sandbox — runtime detail</h1>
+    <p class="text-[13px] text-fg2 leading-[1.5] mt-1">Drill-in from a <code class="font-mono text-[12px]">runtime: 'deno'</code> row. Shows live process state, lifecycle controls, the manifest-declared network allowlist the host proxy enforces, and a recent stderr feed. Stays in lockstep with <a class="text-accent" href="https://github.com/subbu963/gen-app/blob/phase1/edge-extensions/docs/adrs/0001-extension-sandbox-runtime.md">ADR&nbsp;0001</a>.</p>
+  </div>
+
+  <div class="grid grid-cols-[1fr_360px] gap-6 items-start max-w-[1080px] w-full">
+
+    <!-- DESKTOP: sandbox detail sheet -->
+    <div class="flex flex-col gap-3">
+      <div class="anno">Desktop · sheet</div>
+
+      <div class="bg-card rounded-[14px] overflow-hidden" style="border: 1px solid var(--stroke-soft);">
+
+        <!-- header -->
+        <div class="px-5 pt-4 pb-3 flex items-start gap-3 border-b border-hairline">
+          <div class="w-9 h-9 rounded-[10px] inline-flex items-center justify-center bg-card-elevated shrink-0">
+            <i data-lucide="cloud-sun" class="w-4 h-4 text-yellow"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <div class="text-[15px] font-semibold text-fg1">Open-Meteo</div>
+              <span class="rt-chip rt-deno">deno · v2.1.0</span>
+              <span class="text-[10.5px] font-mono text-fg3">bundled</span>
+            </div>
+            <div class="text-[11.5px] text-fg2 mt-0.5">Weather + geocoding · 2 providers · 1 widget · network allowlisted</div>
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            <button class="text-fg2 hover:text-fg1 p-1.5 rounded bg-transparent border-none cursor-pointer" title="View source"><i data-lucide="file-text" class="w-3.5 h-3.5"></i></button>
+            <button class="text-fg2 hover:text-fg1 p-1.5 rounded bg-transparent border-none cursor-pointer" title="Open data folder"><i data-lucide="folder" class="w-3.5 h-3.5"></i></button>
+            <button class="text-fg2 hover:text-fg1 p-1.5 rounded bg-transparent border-none cursor-pointer" title="Close"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+          </div>
+        </div>
+
+        <!-- status + actions strip -->
+        <div class="px-5 py-3 flex items-center gap-3 border-b border-hairline">
+          <div class="flex items-center gap-2">
+            <span class="pdot running"></span>
+            <span class="text-[12.5px] font-semibold text-fg1">Running</span>
+          </div>
+          <span class="text-fg4">·</span>
+          <span class="text-[11px] font-mono text-fg2">pid 48217</span>
+          <span class="text-fg4">·</span>
+          <span class="text-[11px] font-mono text-fg2">up 2h 14m</span>
+          <span class="flex-1"></span>
+          <button class="text-[11.5px] font-semibold py-1 px-2.5 rounded-full border border-soft text-fg1 bg-card-elevated cursor-pointer flex items-center gap-1.5">
+            <i data-lucide="rotate-cw" class="w-3 h-3"></i>Restart
+          </button>
+          <button class="text-[11.5px] font-semibold py-1 px-2.5 rounded-full text-red border-none cursor-pointer flex items-center gap-1.5" style="background: rgba(255,69,58,0.12);">
+            <i data-lucide="square" class="w-3 h-3"></i>Stop
+          </button>
+        </div>
+
+        <!-- runtime fields + resources, two columns -->
+        <div class="grid grid-cols-2 gap-6 px-5 py-4 border-b border-hairline">
+
+          <div class="flex flex-col gap-2">
+            <div class="anno mb-1">Runtime</div>
+            <dl class="kv">
+              <dt>spec</dt>           <dd>deno · v2.1.0</dd>
+              <dt>entry</dt>          <dd>index.ts</dd>
+              <dt>port</dt>           <dd>127.0.0.1:<span class="text-fg2">52814</span></dd>
+              <dt>idle stop</dt>      <dd>5 min</dd>
+              <dt>cold start</dt>     <dd>42 ms</dd>
+              <dt>restarts</dt>       <dd>0 · in last 24h</dd>
+            </dl>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div class="anno mb-1">Resources</div>
+            <div class="flex flex-col gap-3">
+              <div>
+                <div class="flex items-center gap-2 mb-1 text-[11px] font-mono">
+                  <span class="text-fg3">memory</span>
+                  <span class="text-fg2">38 MB</span>
+                  <span class="text-fg4">/</span>
+                  <span class="text-fg3">256 MB</span>
+                </div>
+                <div class="bar"><div class="fill" style="width: 14.8%;"></div></div>
+              </div>
+              <div>
+                <div class="flex items-center gap-2 mb-1 text-[11px] font-mono">
+                  <span class="text-fg3">disk</span>
+                  <span class="text-fg2">1.4 MB</span>
+                  <span class="text-fg4">/</span>
+                  <span class="text-fg3">soft cap 200 MB</span>
+                </div>
+                <div class="bar"><div class="fill" style="width: 0.7%;"></div></div>
+              </div>
+              <div class="text-[10.5px] font-mono text-fg3 leading-relaxed">
+                ~/Library/.../extensions/<span class="text-fg2">open-meteo</span>/
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- lifecycle controls -->
+        <div class="px-5 py-4 border-b border-hairline flex flex-col gap-3">
+          <div class="anno">Lifecycle</div>
+
+          <div class="flex items-center gap-3">
+            <div class="text-[12.5px] text-fg1 w-[140px] shrink-0">Idle stop</div>
+            <div class="flex-1 max-w-[280px]">
+              <div class="slider"><div class="fill" style="width: 22%;"></div><div class="thumb" style="left: 22%;"></div></div>
+            </div>
+            <div class="text-[11.5px] font-mono text-fg2 w-[64px] text-right">5 min</div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="text-[12.5px] text-fg1 w-[140px] shrink-0">Hot reload <span class="text-[10px] font-mono text-fg3 ml-1">dev only</span></div>
+            <span class="flex-1"></span>
+            <!-- compact toggle inline -->
+            <div class="relative w-[36px] h-[20px] rounded-[10px] flex-shrink-0" style="background: var(--fg4);">
+              <div class="absolute top-[2px] left-[2px] w-[16px] h-[16px] rounded-full bg-white" style="box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="text-[12.5px] text-fg1 w-[140px] shrink-0">Memory ceiling</div>
+            <span class="flex-1"></span>
+            <div class="inline-flex items-center gap-0 rounded-full overflow-hidden border border-soft text-[11px] font-mono">
+              <button class="px-2.5 py-1 text-fg2 bg-transparent border-none cursor-pointer">128</button>
+              <button class="px-2.5 py-1 text-white border-none cursor-pointer" style="background: var(--color-accent);">256</button>
+              <button class="px-2.5 py-1 text-fg2 bg-transparent border-none cursor-pointer">512</button>
+              <button class="px-2.5 py-1 text-fg2 bg-transparent border-none cursor-pointer">1024</button>
+            </div>
+            <span class="text-[11px] font-mono text-fg3">MB</span>
+          </div>
+
+          <div class="text-[11px] text-fg3 leading-[1.5] mt-1">
+            Enforced via <code class="font-mono">setrlimit(RLIMIT_AS, …)</code> on spawn. Hitting the ceiling kills the subprocess; the host respawns it under exponential backoff.
+          </div>
+        </div>
+
+        <!-- network allowlist -->
+        <div class="px-5 py-4 border-b border-hairline flex flex-col gap-2.5">
+          <div class="flex items-center gap-2">
+            <div class="anno">Network allowlist</div>
+            <span class="text-fg4">·</span>
+            <span class="text-[10.5px] font-mono text-fg3">manifest.permissions.network</span>
+            <span class="flex-1"></span>
+            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-mono" style="background: rgba(48,209,88,0.14); color: var(--color-green);">
+              <span class="pdot running" style="width: 5px; height: 5px;"></span>proxy live
+            </span>
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="host">geocoding-api.open-meteo.com</span>
+            <span class="host">api.open-meteo.com</span>
+          </div>
+          <div class="text-[11px] text-fg3 leading-[1.5]">
+            Outbound requests route through a per-extension hyper proxy via <code class="font-mono">HTTPS_PROXY</code>; everything else returns <code class="font-mono">403</code> from the host.
+          </div>
+        </div>
+
+        <!-- stderr feed -->
+        <div class="flex flex-col">
+          <div class="px-5 pt-4 pb-2 flex items-center gap-2">
+            <div class="anno">Recent stderr</div>
+            <span class="text-fg4">·</span>
+            <span class="text-[10.5px] font-mono text-fg3">last 5 lines · piped to event_log</span>
+            <span class="flex-1"></span>
+            <button class="text-[11px] text-accent font-mono bg-transparent border-none cursor-pointer flex items-center gap-1">
+              <i data-lucide="external-link" class="w-3 h-3"></i>open in Logs
+            </button>
+          </div>
+          <div class="bg-card-elevated mx-3 mb-4 rounded-[8px] py-2 border border-hairline">
+            <div class="log-row info"><span class="ts">14:02:11</span><span class="lvl">info</span><span class="msg">[open-meteo] listening on 127.0.0.1:52814</span></div>
+            <div class="log-row info"><span class="ts">14:02:11</span><span class="lvl">info</span><span class="msg">deno cache warm · 38ms · 6 modules</span></div>
+            <div class="log-row info"><span class="ts">15:14:03</span><span class="lvl">info</span><span class="msg">getForecast(city=Tokyo) → 200 · 184ms</span></div>
+            <div class="log-row warn"><span class="ts">16:09:22</span><span class="lvl">warn</span><span class="msg">api.open-meteo.com responded 429 · retry-after 2s</span></div>
+            <div class="log-row info"><span class="ts">16:09:24</span><span class="lvl">info</span><span class="msg">getForecast(city=Berlin) → 200 · 312ms</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- States row: crashed / idle / disabled -->
+      <div class="grid grid-cols-3 gap-3 mt-2">
+
+        <div class="bg-card rounded-[10px] p-3 flex flex-col gap-1.5" style="border: 1px solid var(--stroke-soft);">
+          <div class="flex items-center gap-1.5">
+            <span class="pdot idle"></span>
+            <span class="text-[12px] font-semibold text-fg1">Idle</span>
+          </div>
+          <div class="text-[10.5px] text-fg2 leading-[1.5]">Stopped after 5 min of no calls. Next call cold-starts the subprocess. Re-warms in ~40ms.</div>
+        </div>
+
+        <div class="bg-card rounded-[10px] p-3 flex flex-col gap-1.5" style="border: 1px solid var(--stroke-soft);">
+          <div class="flex items-center gap-1.5">
+            <span class="pdot crashed"></span>
+            <span class="text-[12px] font-semibold text-fg1">Backing off</span>
+          </div>
+          <div class="text-[10.5px] text-fg2 leading-[1.5]">3 crashes · next attempt in 8s. <span class="text-red">Disabled after 5.</span></div>
+        </div>
+
+        <div class="bg-card rounded-[10px] p-3 flex flex-col gap-1.5" style="border: 1px solid var(--stroke-soft);">
+          <div class="flex items-center gap-1.5">
+            <span class="pdot stopped"></span>
+            <span class="text-[12px] font-semibold text-fg1">Stopped</span>
+          </div>
+          <div class="text-[10.5px] text-fg2 leading-[1.5]">Toggled off. Tools removed from harness. Storage preserved.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- iOS — soft-disabled rationale -->
+    <div class="flex flex-col gap-3">
+      <div class="anno">iOS · why this is unavailable</div>
+      <div class="bg-window rounded-[22px] overflow-hidden" style="border: 1px solid var(--stroke-soft); height: 520px;">
+        <div class="px-4 pt-3 pb-2 flex items-center gap-2">
+          <i data-lucide="chevron-left" class="w-4 h-4 text-accent"></i>
+          <span class="text-[15px] font-semibold text-fg1">Open-Meteo</span>
+        </div>
+
+        <div class="px-4 pb-2 flex flex-col gap-3 opacity-95">
+
+          <!-- big disabled header -->
+          <div class="bg-card rounded-[12px] p-3.5 flex items-start gap-3" style="border: 1px solid var(--stroke-soft);">
+            <div class="w-8 h-8 rounded-[8px] inline-flex items-center justify-center shrink-0 bg-card-elevated">
+              <i data-lucide="cloud-sun" class="w-4 h-4 text-yellow"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[13px] text-fg1 font-semibold">Open-Meteo</div>
+              <div class="text-[11px] text-fg2 mt-0.5 flex items-center gap-1.5">
+                <span class="rt-chip rt-deno">deno · v2.1.0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- rationale -->
+          <div class="bg-card rounded-[12px] p-3.5 flex flex-col gap-2" style="border: 1px solid var(--stroke-soft);">
+            <div class="flex items-center gap-1.5">
+              <i data-lucide="info" class="w-3.5 h-3.5 text-orange"></i>
+              <div class="text-[12px] font-semibold text-fg1">Runs on Mac only</div>
+            </div>
+            <div class="text-[11.5px] text-fg2 leading-[1.5]">
+              This extension uses the <span class="font-mono text-fg1">deno</span> runtime, which needs to spawn a sandboxed subprocess. iOS App Store rule <span class="font-mono text-fg1">2.5.2</span> forbids interpreted code outside WebKit.
+            </div>
+            <div class="text-[11.5px] text-fg2 leading-[1.5]">
+              Open this canvas on your Mac and the widget will refresh; on iPhone its last cached data stays visible.
+            </div>
+          </div>
+
+          <!-- alternatives -->
+          <div>
+            <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold mb-1.5 ml-1">Available on iOS</div>
+            <div class="bg-card rounded-[10px] overflow-hidden" style="border: 1px solid var(--stroke-soft);">
+              <div class="flex items-center gap-2.5 px-3 py-2.5 border-b border-hairline">
+                <i data-lucide="globe" class="w-4 h-4 text-accent"></i>
+                <div class="flex-1 min-w-0">
+                  <div class="text-[12.5px] text-fg1">Use a remote MCP server</div>
+                  <div class="text-[10.5px] text-fg2">Works on iPhone and Mac</div>
+                </div>
+                <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-fg3"></i>
+              </div>
+              <div class="flex items-center gap-2.5 px-3 py-2.5">
+                <i data-lucide="file-code" class="w-4 h-4 text-purple"></i>
+                <div class="flex-1 min-w-0">
+                  <div class="text-[12.5px] text-fg1">Re-author as a worker extension</div>
+                  <div class="text-[10.5px] text-fg2">Single-file JS · no subprocess</div>
+                </div>
+                <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-fg3"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- cached data line -->
+          <div class="text-[11px] text-fg3 leading-[1.5] px-1">
+            Cached <span class="font-mono text-fg2">getForecast</span> · 18 min ago · <span class="text-fg2">Tokyo · 21°</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes -->
+  <div class="border-t border-hairline pt-5 max-w-[860px] flex flex-col gap-3">
+    <div class="anno">Atoms introduced</div>
+    <ul class="text-[12.5px] text-fg2 leading-[1.7] list-disc pl-5 space-y-1">
+      <li><strong class="text-fg1 font-semibold">Runtime chip.</strong> Same vocabulary as the kind chip — 9.5px mono pill — but distinguishes <code class="font-mono">worker</code> (gray) from <code class="font-mono">deno</code> (green). Pair with the kind chip on every row.</li>
+      <li><strong class="text-fg1 font-semibold">Process status dot.</strong> 7px circle with optional pulse. Green = running, gray = idle, faded = stopped, red = crashed/backoff. Re-used across the Logs viewer and Developer panel.</li>
+      <li><strong class="text-fg1 font-semibold">Host pill.</strong> Mono 10.5px pill on neutral background — the manifest's <code class="font-mono">permissions.network</code> entries the proxy enforces. Never editable here; this is a read-out.</li>
+      <li><strong class="text-fg1 font-semibold">Crashed-state copy is honest.</strong> "Backing off · 3 crashes · next attempt in 8s · disabled after 5." Numbers come from <code class="font-mono">ext_runtime.rs</code> — match them exactly.</li>
+      <li><strong class="text-fg1 font-semibold">iOS rationale block.</strong> Same three-part pattern as a denied-auth row — icon + headline + plain-language explanation + alternatives. Never just "unavailable".</li>
+    </ul>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body></html>

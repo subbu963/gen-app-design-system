@@ -73,21 +73,122 @@
       </button>
     </div>
 
-    <!-- Request budget -->
+    <!-- Daily spend ceiling — generalized to every provider -->
     <div class="flex flex-col gap-2">
-      <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold">Request budget</div>
-      <div class="bg-card rounded-[10px]">
-        <div class="flex items-center gap-3 px-3.5 py-2.5 border-b border-hairline">
-          <div class="w-7 h-7 rounded-md flex items-center justify-center bg-card-elevated"><i data-lucide="wallet" class="w-3.5 h-3.5 text-yellow"></i></div>
-          <div class="flex-1 min-w-0"><div class="text-sm text-fg1">Daily ceiling</div><div class="text-[11px] text-fg2">Stops Claude Code from racking up surprise tokens</div></div>
-          <span class="text-sm text-fg1 font-mono">$20.00</span>
+      <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold flex items-center gap-2">
+        <span>Daily spend ceiling</span>
+        <span class="text-fg4">·</span>
+        <span class="text-fg2 normal-case tracking-normal font-normal">per provider</span>
+      </div>
+      <div class="bg-card rounded-[10px] divide-y divide-[var(--stroke-hairline)]">
+
+        <!-- Claude Code · active gauge -->
+        <div class="px-3.5 py-3 flex flex-col gap-2">
+          <div class="flex items-center gap-3">
+            <div class="w-7 h-7 rounded-md inline-flex items-center justify-center text-white text-[11px] font-bold shrink-0" style="background:#D97757">CC</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm text-fg1">Claude Code <span class="text-[10px] font-mono text-fg3 ml-1">exact · total_cost_usd</span></div>
+              <div class="text-[11px] text-fg2">Used <span class="text-fg1 font-mono">$3.24</span> of <span class="text-fg1 font-mono">$20</span> · resets at midnight</div>
+            </div>
+            <span class="text-[13px] text-fg1 font-mono">$20</span>
+          </div>
+          <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-base)">
+            <div class="h-full rounded-full bg-green" style="width: 16.2%"></div>
+          </div>
         </div>
-        <div class="flex items-center gap-3 px-3.5 py-2.5">
-          <input type="range" min="1" max="100" value="20" class="flex-1" style="accent-color:var(--color-accent)" />
-          <span class="text-[11px] text-fg2 font-mono min-w-[60px] text-right">$1 — $100</span>
+
+        <!-- Groq -->
+        <div class="px-3.5 py-3 flex flex-col gap-2">
+          <div class="flex items-center gap-3">
+            <div class="w-7 h-7 rounded-md inline-flex items-center justify-center text-white text-[11px] font-bold shrink-0" style="background:#FF9F0A">G</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm text-fg1">Groq <span class="text-[10px] font-mono text-fg3 ml-1">estimated · tokens × rate</span></div>
+              <div class="text-[11px] text-fg2">Used <span class="text-fg1 font-mono">$0.84</span> of <span class="text-fg1 font-mono">$5</span></div>
+            </div>
+            <span class="text-[13px] text-fg1 font-mono">$5</span>
+          </div>
+          <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-base)">
+            <div class="h-full rounded-full bg-green" style="width: 16.8%"></div>
+          </div>
+        </div>
+
+        <!-- OpenRouter — at ceiling (gated) -->
+        <div class="px-3.5 py-3 flex flex-col gap-2" style="background: rgba(255,69,58,0.04)">
+          <div class="flex items-center gap-3">
+            <div class="w-7 h-7 rounded-md inline-flex items-center justify-center text-white text-[11px] font-bold shrink-0" style="background:#5E5CE6">OR</div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <div class="text-sm text-fg1">OpenRouter <span class="text-[10px] font-mono text-fg3 ml-1">exact · usage.cost</span></div>
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-tint-red text-red text-[10px] font-semibold">at ceiling</span>
+              </div>
+              <div class="text-[11px] text-fg2">Used <span class="text-fg1 font-mono">$10.00</span> of <span class="text-fg1 font-mono">$10</span> · chat refused until midnight</div>
+            </div>
+            <span class="text-[13px] text-fg1 font-mono">$10</span>
+          </div>
+          <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-base)">
+            <div class="h-full rounded-full bg-red" style="width: 100%"></div>
+          </div>
+        </div>
+
+        <!-- OpenAI -->
+        <div class="px-3.5 py-3 flex flex-col gap-2">
+          <div class="flex items-center gap-3">
+            <div class="w-7 h-7 rounded-md inline-flex items-center justify-center text-white text-[11px] font-bold shrink-0" style="background:#10A37F">AI</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm text-fg1">OpenAI <span class="text-[10px] font-mono text-fg3 ml-1">estimated · tokens × rate</span></div>
+              <div class="text-[11px] text-fg2">Used <span class="text-fg1 font-mono">$2.10</span> of <span class="text-fg1 font-mono">$15</span></div>
+            </div>
+            <span class="text-[13px] text-fg1 font-mono">$15</span>
+          </div>
+          <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-base)">
+            <div class="h-full rounded-full bg-green" style="width: 14%"></div>
+          </div>
         </div>
       </div>
-      <div class="text-xs text-fg2">Used <span class="text-fg1 font-mono">$3.24</span> today · resets at midnight local time.</div>
+      <div class="text-xs text-fg2 leading-[1.5]">
+        Exact USD where the API reports it (Claude Code, OpenRouter); token-estimated otherwise. <code class="font-mono text-fg1">checkBudgetGate</code> refuses a turn at the ceiling — see the throttled-composer state below.
+      </div>
+    </div>
+
+    <!-- Throttle / gate-error states -->
+    <div class="flex flex-col gap-2">
+      <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold">When the gate refuses</div>
+      <div class="grid grid-cols-2 gap-3">
+
+        <!-- Throttled composer (429 backoff) -->
+        <div class="bg-card rounded-[12px] p-3 flex flex-col gap-2">
+          <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold">rate-limited · 429 + retry-after</div>
+          <div class="bg-base rounded-full p-1 flex items-center gap-1.5" style="border: 1px solid var(--stroke-soft)">
+            <input class="flex-1 bg-transparent border-none outline-none text-sm text-fg3 px-3 py-1 font-sans" placeholder="Composer is waiting…" disabled />
+            <button class="bg-card-elevated text-fg2 rounded-full text-[11px] font-mono font-semibold px-2.5 py-1 flex items-center gap-1 border-none cursor-not-allowed">
+              <i data-lucide="timer" class="w-3 h-3"></i>retry in 6s
+            </button>
+          </div>
+          <div class="text-[11px] text-fg2 leading-[1.45]">
+            <code class="font-mono">llm.rs</code> waits out a 429 honouring <code class="font-mono">retry-after</code> (cap ~12 s). The send button becomes a countdown chip — the composer stays focusable so the user can keep drafting.
+          </div>
+        </div>
+
+        <!-- Budget gate refused -->
+        <div class="bg-card rounded-[12px] p-3 flex flex-col gap-2">
+          <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold">budget reached · gate refused</div>
+          <div class="rounded-lg p-2.5 border flex items-start gap-2" style="background: rgba(255,69,58,0.06); border-color: rgba(255,69,58,0.22)">
+            <i data-lucide="wallet" class="w-3.5 h-3.5 text-red shrink-0 mt-0.5"></i>
+            <div class="flex-1 min-w-0">
+              <div class="text-xs text-fg1 font-semibold">OpenRouter at $10 ceiling.</div>
+              <div class="text-[11px] text-fg2 leading-[1.45] mt-0.5">
+                Resets at midnight, or
+                <a class="text-accent font-semibold cursor-pointer">raise the ceiling</a>
+                ·
+                <a class="text-accent font-semibold cursor-pointer">switch provider</a>.
+              </div>
+            </div>
+          </div>
+          <div class="text-[11px] text-fg2 leading-[1.45]">
+            Error in the dock, not a modal. Always offers two next steps — never just "request failed".
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <script>lucide.createIcons();</script>

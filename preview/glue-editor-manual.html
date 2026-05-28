@@ -1,0 +1,193 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>Glue editor — manual</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="../tailwind.js"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  body { background: var(--bg-base); font-family: var(--font-sans); color: var(--fg1); margin: 0; }
+  .code-line { display: flex; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.55; }
+  .ln { color: var(--fg3); text-align: right; padding: 0 12px 0 8px; user-select: none; min-width: 32px; }
+  .code-content { flex: 1; padding-right: 12px; white-space: pre; color: var(--fg1); }
+  .tok-kw   { color: #FF7AB6; }
+  .tok-fn   { color: #5AC8FA; }
+  .tok-str  { color: var(--color-green); }
+  .tok-num  { color: var(--color-orange); }
+  .tok-cmt  { color: var(--fg3); font-style: italic; }
+  .tok-tag  { color: #FF7AB6; }
+  .tok-attr { color: var(--color-yellow); }
+  .ext-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 999px; background: var(--bg-card-elevated); color: var(--fg1); font-family: var(--font-mono); font-size: 10px; font-weight: 600; border: 1px solid var(--stroke-soft); }
+</style>
+</head>
+<body class="p-5 flex flex-col gap-3 min-h-screen">
+
+  <!-- Breadcrumb / status -->
+  <div class="flex items-center gap-2 text-xs text-fg2">
+    <span class="cursor-pointer">Canvas</span>
+    <span class="text-fg4">›</span>
+    <span class="cursor-pointer">@market widget</span>
+    <span class="text-fg4">›</span>
+    <span class="text-fg1 font-semibold font-mono">glue.jsx</span>
+    <span class="text-fg4 ml-2">·</span>
+    <span class="text-fg2">manual editing</span>
+    <span class="flex-1"></span>
+    <span class="inline-flex items-center gap-1 text-orange text-[11px] font-medium">
+      <i data-lucide="circle" class="w-2 h-2 fill-current"></i>
+      Unsaved changes
+    </span>
+    <span class="text-fg4">·</span>
+    <span class="text-[11px] text-fg2 font-mono">⌘S to save</span>
+  </div>
+
+  <!-- Widget meta header -->
+  <div class="bg-card rounded-lg p-3 flex items-center gap-3">
+    <div class="w-9 h-9 rounded-md flex items-center justify-center text-white text-sm font-bold" style="background:linear-gradient(135deg,var(--color-accent),var(--color-indigo))">M</div>
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-2">
+        <div class="text-fg1 font-semibold text-base -tracking-[0.012em]">@market widget</div>
+        <span class="ext-chip">stock</span>
+      </div>
+      <div class="flex items-center gap-2 text-fg2 text-xs mt-0.5">
+        <span>Composes</span>
+        <span class="ext-chip"><i data-lucide="puzzle" class="w-3 h-3"></i> yahoo-finance</span>
+        <span class="ext-chip"><i data-lucide="puzzle" class="w-3 h-3"></i> yahoo-finance/history</span>
+      </div>
+    </div>
+
+    <!-- AI toggle (off in manual mode) -->
+    <button class="font-sans text-xs font-medium py-1.5 px-3 rounded-full cursor-pointer border border-soft flex items-center gap-1.5 text-fg2 bg-transparent">
+      <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>Ask AI
+    </button>
+    <button class="font-sans text-xs font-semibold py-1.5 px-3 rounded-full cursor-pointer border border-soft flex items-center gap-1.5 text-fg2 bg-transparent">
+      <i data-lucide="undo-2" class="w-3.5 h-3.5"></i>Discard
+    </button>
+    <button class="font-sans text-xs font-semibold py-1.5 px-3 rounded-full cursor-pointer border-none flex items-center gap-1.5 bg-accent text-white">
+      <i data-lucide="check" class="w-3.5 h-3.5"></i>Save
+    </button>
+  </div>
+
+  <!-- Tab strip -->
+  <div class="flex gap-1 border-b border-hairline">
+    <div class="px-3 py-2 text-xs font-medium text-accent border-b-2 border-accent -mb-px flex items-center gap-1.5"><i data-lucide="layers" class="w-3.5 h-3.5"></i>glue.jsx</div>
+    <div class="px-3 py-2 text-xs font-medium text-fg2 border-b-2 border-transparent -mb-px flex items-center gap-1.5"><i data-lucide="puzzle" class="w-3.5 h-3.5"></i>Extensions <span class="bg-card-elevated text-fg2 text-[10px] font-mono px-1.5 rounded-full">2</span></div>
+    <div class="px-3 py-2 text-xs font-medium text-fg2 border-b-2 border-transparent -mb-px flex items-center gap-1.5"><i data-lucide="braces" class="w-3.5 h-3.5"></i>Spec</div>
+    <div class="px-3 py-2 text-xs font-medium text-fg2 border-b-2 border-transparent -mb-px flex items-center gap-1.5"><i data-lucide="settings" class="w-3.5 h-3.5"></i>Manifest</div>
+  </div>
+
+  <!-- Editor + live preview -->
+  <div class="grid grid-cols-[1fr_400px] gap-3 flex-1 min-h-[640px]">
+
+    <!-- Glue code editor -->
+    <div class="bg-card rounded-lg flex flex-col overflow-hidden">
+      <div class="px-3 py-2 border-b border-hairline flex items-center gap-2">
+        <span class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold">Source</span>
+        <span class="text-[11px] text-fg2 font-mono">glue.jsx · 18 lines</span>
+        <div class="ml-auto flex items-center gap-1 text-fg2">
+          <button class="p-1 hover:bg-white/[0.04] rounded bg-transparent border-none cursor-pointer"><i data-lucide="undo-2" class="w-4 h-4"></i></button>
+          <button class="p-1 hover:bg-white/[0.04] rounded bg-transparent border-none cursor-pointer"><i data-lucide="redo-2" class="w-4 h-4"></i></button>
+          <button class="p-1 hover:bg-white/[0.04] rounded bg-transparent border-none cursor-pointer"><i data-lucide="search" class="w-4 h-4"></i></button>
+        </div>
+      </div>
+
+      <div class="flex-1 overflow-y-auto bg-base py-2">
+        <div class="code-line"><span class="ln">1</span><span class="code-content"><span class="tok-cmt">// @market widget — composes 2 extensions</span></span></div>
+        <div class="code-line"><span class="ln">2</span><span class="code-content"><span class="tok-kw">import</span> { <span class="tok-fn">Card</span>, <span class="tok-fn">Heading</span>, <span class="tok-fn">Stat</span>, <span class="tok-fn">Delta</span>, <span class="tok-fn">Sparkline</span> } <span class="tok-kw">from</span> <span class="tok-str">"@gen-app/components"</span>;</span></div>
+        <div class="code-line"><span class="ln">3</span><span class="code-content"><span class="tok-kw">import</span> { <span class="tok-fn">useExtension</span> } <span class="tok-kw">from</span> <span class="tok-str">"@gen-app/runtime"</span>;</span></div>
+        <div class="code-line"><span class="ln">4</span><span class="code-content"></span></div>
+        <div class="code-line"><span class="ln">5</span><span class="code-content"><span class="tok-kw">export default function</span> <span class="tok-fn">StockWidget</span>({ symbol, ticker = <span class="tok-str">"AAPL"</span> }) {</span></div>
+        <div class="code-line"><span class="ln">6</span><span class="code-content">  <span class="tok-kw">const</span> quote   = <span class="tok-fn">useExtension</span>(<span class="tok-str">"yahoo-finance"</span>,         { ticker });</span></div>
+        <div class="code-line"><span class="ln">7</span><span class="code-content">  <span class="tok-kw">const</span> history = <span class="tok-fn">useExtension</span>(<span class="tok-str">"yahoo-finance/history"</span>, { ticker, range: <span class="tok-str">"1mo"</span> });</span></div>
+        <div class="code-line"><span class="ln">8</span><span class="code-content"></span></div>
+
+        <!-- Caret position highlight -->
+        <div class="code-line" style="background:rgba(255,255,255,0.03)"><span class="ln" style="color: var(--color-accent)">9</span><span class="code-content">  <span class="tok-kw">return</span> (</span></div>
+        <div class="code-line"><span class="ln">10</span><span class="code-content">    <span class="tok-tag">&lt;Card</span> <span class="tok-attr">symbol</span>={symbol}<span class="tok-tag">&gt;</span></span></div>
+        <div class="code-line"><span class="ln">11</span><span class="code-content">      <span class="tok-tag">&lt;Heading</span> <span class="tok-attr">size</span>=<span class="tok-str">"xs"</span> <span class="tok-attr">color</span>=<span class="tok-str">"fg2"</span><span class="tok-tag">&gt;</span>{quote.ticker} · {quote.name}<span class="tok-tag">&lt;/Heading&gt;</span></span></div>
+        <div class="code-line"><span class="ln">12</span><span class="code-content">      <span class="tok-tag">&lt;Stat</span> <span class="tok-attr">size</span>=<span class="tok-str">"lg"</span><span class="tok-tag">&gt;</span>${quote.price?.toFixed(<span class="tok-num">2</span>)}<span class="tok-tag">&lt;/Stat&gt;</span></span></div>
+        <div class="code-line"><span class="ln">13</span><span class="code-content">      <span class="tok-tag">&lt;Delta</span> <span class="tok-attr">value</span>={quote.delta} <span class="tok-attr">pct</span>={quote.pct} <span class="tok-tag">/&gt;</span></span></div>
+        <div class="code-line"><span class="ln">14</span><span class="code-content">      <span class="tok-tag">&lt;Sparkline</span> <span class="tok-attr">data</span>={history.closes} <span class="tok-attr">color</span>={quote.delta &gt;= <span class="tok-num">0</span> ? <span class="tok-str">"green"</span> : <span class="tok-str">"red"</span>} <span class="tok-tag">/&gt;</span></span></div>
+        <div class="code-line"><span class="ln">15</span><span class="code-content">    <span class="tok-tag">&lt;/Card&gt;</span></span></div>
+        <div class="code-line"><span class="ln">16</span><span class="code-content">  );</span></div>
+        <div class="code-line"><span class="ln">17</span><span class="code-content">}</span></div>
+      </div>
+
+      <!-- Status bar -->
+      <div class="px-3 py-1.5 border-t border-hairline flex items-center justify-between text-[11px] text-fg2 font-mono">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-yellow"></span>JSX</span>
+          <span class="text-green">No issues</span>
+          <span class="text-fg3">·</span>
+          <span class="text-fg2 flex items-center gap-1"><i data-lucide="zap" class="w-3 h-3"></i>preview live</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span>Ln 12, Col 15</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live preview pane -->
+    <div class="bg-card rounded-lg flex flex-col overflow-hidden min-h-0">
+      <!-- Pane header -->
+      <div class="px-3.5 py-2.5 border-b border-hairline flex items-center gap-2">
+        <div class="w-6 h-6 rounded-md bg-card-elevated flex items-center justify-center"><i data-lucide="eye" class="w-3.5 h-3.5 text-accent"></i></div>
+        <div class="flex-1 min-w-0">
+          <div class="text-xs text-fg1 font-semibold leading-tight">Live preview</div>
+          <div class="text-[11px] text-fg2 font-mono">Re-renders on save · sandbox worker</div>
+        </div>
+        <button class="p-1 hover:bg-white/[0.04] rounded text-fg2 bg-transparent border-none cursor-pointer" title="Refresh"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>
+        <button class="p-1 hover:bg-white/[0.04] rounded text-fg2 bg-transparent border-none cursor-pointer" title="Expand"><i data-lucide="maximize-2" class="w-3.5 h-3.5"></i></button>
+      </div>
+
+      <!-- Props bar -->
+      <div class="px-3 py-2 border-b border-hairline flex items-center gap-2 bg-base">
+        <span class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold">Props</span>
+        <span class="text-[11px] text-fg2 font-mono">ticker =</span>
+        <input class="text-[11px] font-mono bg-card-elevated border border-soft rounded px-1.5 py-0.5 text-fg1 outline-none focus:border-accent w-[80px]" value="AAPL" />
+        <span class="text-fg4">·</span>
+        <span class="text-[10px] font-mono text-fg3">@symbol = market</span>
+      </div>
+
+      <!-- Rendered widget preview -->
+      <div class="flex-1 p-4 bg-base overflow-auto flex flex-col items-center justify-center">
+        <div class="w-full max-w-[300px] rounded-[14px] p-4 flex flex-col gap-2" style="background: var(--bg-card); box-shadow: var(--elev-1, 0 1px 2px rgba(0,0,0,0.3))">
+          <div class="flex items-center gap-2">
+            <span class="ext-chip">market</span>
+            <span class="text-[10px] text-fg3 font-mono ml-auto">just now</span>
+          </div>
+          <div class="text-[10px] text-fg2 font-medium uppercase tracking-wide">AAPL · Apple Inc.</div>
+          <div class="text-[28px] font-bold text-fg1 -tracking-[0.025em] leading-none font-mono">$224.18</div>
+          <div class="text-[12px] font-semibold text-green flex items-center gap-1">
+            <span>▲ +2.34 (1.05%)</span>
+            <span class="text-fg3 font-normal font-sans">·</span>
+            <span class="text-fg2 font-normal">today</span>
+          </div>
+          <svg viewBox="0 0 100 22" preserveAspectRatio="none" class="w-full h-5 mt-1">
+            <polyline fill="none" stroke="#30D158" stroke-width="1.4" points="0,16 10,14 20,16 32,10 44,12 56,7 68,9 80,4 92,2 100,2"/>
+          </svg>
+        </div>
+        <div class="mt-3 text-[10.5px] font-mono text-fg3 flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-green"></span>Rendered in <span class="text-fg2">128ms</span>
+        </div>
+      </div>
+
+      <!-- Pane footer -->
+      <div class="px-3 py-2 border-t border-hairline flex items-center gap-2 text-[11px] text-fg2">
+        <i data-lucide="info" class="w-3 h-3 text-fg3"></i>
+        <span class="flex-1 leading-[1.4]">The preview runs in a parallel <code class="font-mono text-fg1">GlueWidgetRuntime</code> — fresh worker per render, can't disturb the on-canvas widget.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pattern notes -->
+  <div class="border-t border-hairline pt-5 max-w-[1080px] flex flex-col gap-3">
+    <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold">Pattern notes</div>
+    <ul class="text-[12.5px] text-fg2 leading-[1.7] list-disc pl-5 space-y-1">
+      <li><strong class="text-fg1 font-semibold">Same chrome as the AI-authored mode.</strong> Breadcrumb, meta header, tab strip — all identical. The only swap is the right pane (chat dock → live preview) and the left's "AI is editing" → "Unsaved changes" status.</li>
+      <li><strong class="text-fg1 font-semibold">Props bar above the preview.</strong> Lets the user feed sample inputs without touching the source. Inputs match the widget's declared props (mono font, narrow editor).</li>
+      <li><strong class="text-fg1 font-semibold">Re-render on save, not on keystroke.</strong> A 128ms render means we don't need debounced live-recompile — the explicit ⌘S beat is the rhythm.</li>
+      <li><strong class="text-fg1 font-semibold">"Ask AI" is the gateway between modes.</strong> Toggling it slides the chat dock in from the right and demotes the preview to a tab — the two views are siblings, not competitors.</li>
+    </ul>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body></html>

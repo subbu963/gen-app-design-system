@@ -1,0 +1,215 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>Local model picker</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<script src="../tailwind.js"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  body { background: var(--bg-base); font-family: var(--font-sans); color: var(--fg1); }
+  .modal { width: 540px; background: var(--bg-card); border: 1px solid var(--stroke-soft); border-radius: 18px; padding: 16px; box-shadow: var(--elev-3); display: flex; flex-direction: column; gap: 12px; }
+  .quant-chip { font-family: var(--font-mono); font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 4px; }
+  .q-q4 { background: rgba(48,209,88,0.14); color: var(--color-green); }
+  .q-q5 { background: var(--color-accent-tint); color: var(--color-accent); }
+  .q-q6 { background: rgba(255,159,10,0.14); color: var(--color-orange); }
+  .q-q8 { background: var(--tint-purple); color: var(--color-purple); }
+  .q-f16 { background: var(--bg-card-elevated); color: var(--fg2); border: 1px solid var(--stroke-soft); }
+  .anno { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; color: var(--fg3); margin-bottom: 10px; }
+</style>
+</head>
+<body class="p-7 flex flex-col gap-7 min-h-screen">
+
+  <div class="flex flex-col gap-1 max-w-[720px]">
+    <div class="text-[11px] text-fg3 font-mono uppercase tracking-[0.06em] flex items-center gap-1.5">
+      <i data-lucide="hard-drive-download" class="w-3 h-3"></i> Local model picker · Settings → Embeddings
+    </div>
+    <h1 class="text-[26px] font-semibold -tracking-[0.022em] leading-[1.15]">Pick a GGUF · download · activate</h1>
+    <p class="text-[13px] text-fg2 leading-[1.55] mt-1">Embeddings need a model on disk. The picker searches HuggingFace for GGUF files, streams a download into the app data dir, and promotes one to the active local model. The progress row codified here is reusable — same atom carries any future long-running install.</p>
+  </div>
+
+  <div class="flex flex-wrap gap-6 items-start">
+
+    <!-- State 1: Empty (no model installed) -->
+    <div class="flex flex-col gap-2">
+      <div class="anno"><span class="text-orange">●</span> state 1 — no model installed</div>
+      <div class="modal">
+        <div class="flex items-center gap-2">
+          <i data-lucide="cpu" class="w-4 h-4 text-fg2"></i>
+          <div class="flex-1 text-[15px] font-semibold text-fg1">Local embeddings</div>
+          <button class="text-fg2 cursor-pointer bg-transparent border-none"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+
+        <!-- Empty hero -->
+        <div class="flex flex-col items-center gap-3 py-8 px-6 rounded-xl bg-base border border-dashed border-[var(--fg4)] text-center">
+          <div class="w-12 h-12 rounded-2xl bg-card-elevated flex items-center justify-center">
+            <i data-lucide="package-search" class="w-6 h-6 text-fg2"></i>
+          </div>
+          <div class="flex flex-col gap-1">
+            <div class="text-[15px] font-semibold text-fg1">No model on disk yet.</div>
+            <div class="text-[12px] text-fg2 leading-[1.5] max-w-[320px]">Pick one from HuggingFace. Smaller files mean faster embeds; larger files mean better recall.</div>
+          </div>
+          <button class="text-[12px] font-semibold py-2 px-4 rounded-full text-white bg-accent cursor-pointer flex items-center gap-1.5 border-none mt-1">
+            <i data-lucide="search" class="w-3.5 h-3.5"></i>Browse HuggingFace
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- State 2: Search results -->
+    <div class="flex flex-col gap-2">
+      <div class="anno"><span class="text-accent">▸</span> state 2 — searching huggingface</div>
+      <div class="modal">
+        <div class="flex items-center gap-2">
+          <i data-lucide="search" class="w-4 h-4 text-fg2"></i>
+          <div class="flex-1 text-[15px] font-semibold text-fg1">Browse models</div>
+          <button class="text-fg2 cursor-pointer bg-transparent border-none"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+
+        <div class="flex items-center gap-2 bg-base border border-soft rounded-lg px-3 py-2">
+          <i data-lucide="search" class="w-4 h-4 text-fg2"></i>
+          <input class="flex-1 bg-transparent border-none outline-none text-fg1 text-sm font-sans" value="bge-small-en" />
+          <span class="text-[10px] font-mono text-fg3">huggingface.co · GGUF only</span>
+        </div>
+
+        <div class="flex flex-col gap-1.5 max-h-[360px] overflow-y-auto">
+
+          <!-- Repo card 1 -->
+          <div class="bg-base rounded-[10px] border border-soft p-3">
+            <div class="flex items-center gap-2">
+              <i data-lucide="box" class="w-3.5 h-3.5 text-fg2 shrink-0"></i>
+              <span class="font-mono text-[12.5px] text-fg1 font-semibold flex-1 min-w-0 truncate">ggml-org/bge-small-en-gguf</span>
+              <span class="text-[10.5px] text-fg2 flex items-center gap-1"><i data-lucide="download" class="w-3 h-3"></i>14.2k</span>
+              <span class="text-[10.5px] text-fg2 flex items-center gap-1"><i data-lucide="heart" class="w-3 h-3"></i>312</span>
+            </div>
+            <div class="text-[11px] text-fg2 mt-0.5 ml-[22px]">384 dim · BERT · MIT · updated 2 weeks ago</div>
+            <!-- File list -->
+            <div class="mt-2 ml-[22px] flex flex-col gap-1">
+              <div class="flex items-center gap-2 text-[11.5px] py-1 px-2 rounded-md hover:bg-white/[0.03]">
+                <span class="font-mono text-fg1 flex-1 min-w-0 truncate">bge-small-en-q4_k_m.gguf</span>
+                <span class="quant-chip q-q4">q4_k_m</span>
+                <span class="text-fg2 font-mono w-[58px] text-right">22.5 MB</span>
+                <button class="text-[10px] font-semibold py-1 px-2.5 rounded-full text-white bg-accent cursor-pointer border-none">Download</button>
+              </div>
+              <div class="flex items-center gap-2 text-[11.5px] py-1 px-2 rounded-md hover:bg-white/[0.03]">
+                <span class="font-mono text-fg1 flex-1 min-w-0 truncate">bge-small-en-q5_k_m.gguf</span>
+                <span class="quant-chip q-q5">q5_k_m</span>
+                <span class="text-fg2 font-mono w-[58px] text-right">25.7 MB</span>
+                <button class="text-[10px] font-semibold py-1 px-2.5 rounded-full text-fg1 bg-card-elevated cursor-pointer border-none">Download</button>
+              </div>
+              <div class="flex items-center gap-2 text-[11.5px] py-1 px-2 rounded-md hover:bg-white/[0.03]">
+                <span class="font-mono text-fg1 flex-1 min-w-0 truncate">bge-small-en-q8_0.gguf</span>
+                <span class="quant-chip q-q8">q8_0</span>
+                <span class="text-fg2 font-mono w-[58px] text-right">34.1 MB</span>
+                <button class="text-[10px] font-semibold py-1 px-2.5 rounded-full text-fg1 bg-card-elevated cursor-pointer border-none">Download</button>
+              </div>
+              <div class="flex items-center gap-2 text-[11.5px] py-1 px-2 rounded-md hover:bg-white/[0.03]">
+                <span class="font-mono text-fg1 flex-1 min-w-0 truncate">bge-small-en-f16.gguf</span>
+                <span class="quant-chip q-f16">f16</span>
+                <span class="text-fg2 font-mono w-[58px] text-right">66.8 MB</span>
+                <button class="text-[10px] font-semibold py-1 px-2.5 rounded-full text-fg1 bg-card-elevated cursor-pointer border-none">Download</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Repo card 2 -->
+          <div class="bg-base rounded-[10px] border border-soft p-3 opacity-80">
+            <div class="flex items-center gap-2">
+              <i data-lucide="box" class="w-3.5 h-3.5 text-fg2 shrink-0"></i>
+              <span class="font-mono text-[12.5px] text-fg1 font-semibold flex-1 min-w-0 truncate">CompendiumLabs/bge-small-en-v1.5-gguf</span>
+              <span class="text-[10.5px] text-fg2 flex items-center gap-1"><i data-lucide="download" class="w-3 h-3"></i>8.4k</span>
+            </div>
+            <div class="text-[11px] text-fg2 mt-0.5 ml-[22px]">384 dim · 5 quants available</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- State 3: Downloading + done + active -->
+    <div class="flex flex-col gap-2">
+      <div class="anno"><span class="text-green">●</span> state 3 — downloading + installed</div>
+      <div class="modal">
+        <div class="flex items-center gap-2">
+          <i data-lucide="hard-drive" class="w-4 h-4 text-fg2"></i>
+          <div class="flex-1 text-[15px] font-semibold text-fg1">Local models</div>
+          <button class="text-fg2 cursor-pointer bg-transparent border-none"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+
+        <!-- Downloading row — codified atom -->
+        <div class="bg-base rounded-lg border p-3 flex flex-col gap-2" style="border-color: rgba(10,132,255,0.22)">
+          <div class="flex items-center gap-2.5">
+            <i data-lucide="download" class="w-3.5 h-3.5 text-accent"></i>
+            <span class="font-mono text-[12px] text-fg1 flex-1 min-w-0 truncate">bge-small-en-q5_k_m.gguf</span>
+            <span class="quant-chip q-q5">q5_k_m</span>
+            <span class="font-mono text-[11px] text-fg1">68%</span>
+            <button class="text-[10px] font-semibold py-1 px-2 rounded-full text-fg2 bg-card-elevated cursor-pointer border-none">Cancel</button>
+          </div>
+          <div class="h-1 rounded-full overflow-hidden" style="background: var(--bg-card)">
+            <div class="h-full rounded-full bg-accent" style="width: 68%"></div>
+          </div>
+          <div class="flex items-center gap-3 text-[10.5px] font-mono text-fg2">
+            <span>17.5 MB / 25.7 MB</span>
+            <span class="text-fg4">·</span>
+            <span>4.2 MB/s</span>
+            <span class="text-fg4">·</span>
+            <span>~2s left</span>
+          </div>
+        </div>
+
+        <!-- Installed list -->
+        <div class="text-[10px] text-fg3 uppercase tracking-[0.06em] font-semibold mt-1">On disk · 2 models · 56.6 MB</div>
+        <div class="bg-base rounded-[10px] overflow-hidden border border-soft">
+
+          <!-- Active -->
+          <div class="px-3 py-2.5 border-b border-hairline flex items-center gap-2.5" style="background: rgba(10,132,255,0.05)">
+            <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-accent shrink-0"></i>
+            <div class="flex-1 min-w-0">
+              <div class="font-mono text-[12px] text-fg1 truncate">bge-small-en-q4_k_m.gguf</div>
+              <div class="text-[11px] text-fg2 flex items-center gap-1.5">
+                <span class="quant-chip q-q4">q4_k_m</span>
+                <span>22.5 MB</span>
+                <span class="text-fg4">·</span>
+                <span>384 dim</span>
+              </div>
+            </div>
+            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-accent-tint text-accent text-[10px] font-semibold">active</span>
+          </div>
+
+          <!-- Inactive -->
+          <div class="px-3 py-2.5 flex items-center gap-2.5">
+            <span class="w-3.5 h-3.5 rounded-full border border-[var(--fg4)] shrink-0"></span>
+            <div class="flex-1 min-w-0">
+              <div class="font-mono text-[12px] text-fg1 truncate">all-MiniLM-L6-v2-q8_0.gguf</div>
+              <div class="text-[11px] text-fg2 flex items-center gap-1.5">
+                <span class="quant-chip q-q8">q8_0</span>
+                <span>34.1 MB</span>
+                <span class="text-fg4">·</span>
+                <span>384 dim</span>
+              </div>
+            </div>
+            <button class="text-fg3 hover:text-red p-1 rounded bg-transparent border-none cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <span class="text-[11px] text-fg2">Stored under <code class="font-mono text-fg1">~/Library/Application Support/gen-app/models</code></span>
+          <span class="flex-1"></span>
+          <button class="text-[12px] font-semibold py-1.5 px-3 rounded-full border-none text-fg1 bg-card-elevated cursor-pointer flex items-center gap-1.5">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>Browse more
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes -->
+  <div class="border-t border-hairline pt-5 max-w-[860px] flex flex-col gap-3">
+    <div class="anno">Pattern notes</div>
+    <ul class="text-[12.5px] text-fg2 leading-[1.7] list-disc pl-5 space-y-1">
+      <li><strong class="text-fg1 font-semibold">Quant chip is a typed badge.</strong> q4/q5/q6/q8/f16 map to green/blue/orange/purple/gray — color signals size class at a glance. Always 10px mono, no icon.</li>
+      <li><strong class="text-fg1 font-semibold">Download row is the canonical long-running atom.</strong> Filename + quant + percent + Cancel on row 1; thin 4px bar; mono "current / total · rate · ETA" on row 3. Reuse for MCP <code class="font-mono">npx</code> warm-up, canvas zip imports, anything streamed.</li>
+      <li><strong class="text-fg1 font-semibold">Active is a row state, not a sub-page.</strong> A check-circle in the accent tint and a small "active" pill — the model stays in place.</li>
+      <li><strong class="text-fg1 font-semibold">Empty hero uses the dashed-border + soft icon pattern.</strong> Same shape as the empty canvas — keeps "nothing here yet" voice consistent.</li>
+    </ul>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body></html>

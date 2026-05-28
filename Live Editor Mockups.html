@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>gen-app · Live editor while agent is authoring</title>
+<link rel="stylesheet" href="colors_and_type.css" />
+<script src="tailwind.js"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-base); color: var(--fg1); font-family: var(--font-sans); }
+  .text-fg1 { color: var(--fg1); } .text-fg2 { color: var(--fg2); } .text-fg3 { color: var(--fg3); } .text-fg4 { color: var(--fg4); }
+  .bg-card { background: var(--bg-card); } .bg-card-elevated { background: var(--bg-card-elevated); } .bg-window { background: var(--bg-window); } .bg-base { background: var(--bg-base); }
+  .border-hairline { border-color: var(--stroke-hairline); } .border-soft { border-color: var(--stroke-soft); }
+  .text-accent { color: var(--color-accent); } .bg-accent { background: var(--color-accent); }
+  .bg-accent-tint { background: var(--color-accent-tint); }
+  .text-green { color: var(--color-green); } .text-orange { color: var(--color-orange); } .text-red { color: var(--color-red); } .text-yellow { color: var(--color-yellow); } .text-purple { color: var(--color-purple); } .text-cyan { color: var(--color-cyan); } .text-indigo { color: var(--color-indigo); }
+
+  .anno { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; color: var(--fg3); }
+
+  /* Reusable atoms */
+  .rt-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 6px; border-radius: 999px; font-family: var(--font-mono); font-size: 9.5px; font-weight: 600; letter-spacing: 0.02em; }
+  .rt-worker { background: var(--bg-card-elevated); color: var(--fg2); border: 1px solid var(--stroke-soft); }
+  .rt-deno   { background: rgba(48,209,88,0.14); color: var(--color-green); }
+
+  .pdot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .pdot.running { background: var(--color-green); box-shadow: 0 0 0 0 rgba(48,209,88,0.45); animation: pulse 2s ease-out infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(48,209,88,0.55); } 70% { box-shadow: 0 0 0 6px rgba(48,209,88,0); } 100% { box-shadow: 0 0 0 0 rgba(48,209,88,0); } }
+
+  /* macOS window chrome */
+  .mac-window { background: var(--bg-window); border: 1px solid var(--stroke-soft); border-radius: 12px; box-shadow: var(--elev-4); overflow: hidden; }
+  .mac-titlebar { display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: var(--bg-card); border-bottom: 1px solid var(--stroke-hairline); }
+  .mac-light { width: 12px; height: 12px; border-radius: 999px; }
+  .mac-light.r { background: #ff5f57; } .mac-light.y { background: #febc2e; } .mac-light.g { background: #28c840; }
+
+  /* Code-ish editor block. Static lines, picked to read like real TS. */
+  .editor-line { display: grid; grid-template-columns: 36px 1fr; gap: 8px; font-family: var(--font-mono); font-size: 11.5px; line-height: 1.6; padding: 0 8px; }
+  .editor-line .ln { text-align: right; color: var(--fg4); user-select: none; }
+  .ed-kw  { color: var(--color-purple); }
+  .ed-fn  { color: var(--color-cyan); }
+  .ed-str { color: var(--color-green); }
+  .ed-num { color: var(--color-orange); }
+  .ed-cmt { color: var(--fg3); font-style: italic; }
+  .ed-mute { color: var(--fg3); }
+  .ed-new { background: rgba(48,209,88,0.10); border-left: 2px solid var(--color-green); padding-left: 6px; margin-left: -8px; }
+
+  /* Blinking cursor caret for the streaming-write moment. */
+  .caret { display: inline-block; width: 6px; height: 12px; background: var(--color-accent); vertical-align: -1px; margin-left: 1px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Small chip for inline status in the chat. */
+  .chat-chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 7px; border-radius: 999px; background: var(--bg-card-elevated); font-family: var(--font-mono); font-size: 10.5px; color: var(--fg2); border: 1px solid var(--stroke-soft); }
+  .chat-chip.active { background: rgba(48,209,88,0.10); color: var(--color-green); border-color: transparent; }
+
+  /* Diff card */
+  .diff { font-family: var(--font-mono); font-size: 11px; line-height: 1.55; border-radius: 8px; overflow: hidden; border: 1px solid var(--stroke-soft); }
+  .diff .row { padding: 1px 8px; display: grid; grid-template-columns: 16px 1fr; gap: 6px; }
+  .diff .row.add { background: rgba(48,209,88,0.10); color: var(--color-green); }
+  .diff .row.del { background: rgba(255,69,58,0.10); color: var(--color-red); text-decoration: line-through; opacity: 0.85; }
+  .diff .gut    { color: var(--fg4); }
+  .diff .gut.add { color: var(--color-green); }
+  .diff .gut.del { color: var(--color-red); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard, DCPostIt } = window;
+
+function I({n, c=""}) { return <i data-lucide={n} className={c}></i>; }
+function Anno({children}) { return <div className="anno">{children}</div>; }
+
+/* ───── 1. The setting ───── */
+function SettingArtboard() {
+  const Row = ({ active, title, sub, badge }) => (
+    <div className="flex items-start gap-3 p-3 rounded-[10px] cursor-pointer" style={{
+      background: active ? "var(--color-accent-tint)" : "var(--bg-card)",
+      border: `1px solid ${active ? "var(--color-accent)" : "var(--stroke-soft)"}`,
+    }}>
+      <div className="w-4 h-4 rounded-full mt-0.5 inline-flex items-center justify-center shrink-0" style={{
+        background: active ? "var(--color-accent)" : "var(--bg-card-elevated)",
+        border: active ? "none" : "1px solid var(--stroke-soft)",
+      }}>
+        {active && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <div className="text-[13px] font-semibold text-fg1">{title}</div>
+          {badge && <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded" style={{ background: "var(--bg-card-elevated)", color: "var(--fg3)" }}>{badge}</span>}
+        </div>
+        <div className="text-[11px] text-fg2 leading-[1.5] mt-0.5">{sub}</div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="w-full h-full p-5 flex flex-col gap-3" style={{ background: "var(--bg-window)" }}>
+      <div className="text-[11px] text-fg3 font-mono uppercase tracking-[0.06em] flex items-center gap-1.5">
+        <I n="code-2" c="w-3 h-3" /> Settings → Developer → Live coding
+      </div>
+      <div className="text-[15px] font-semibold text-fg1">When the agent edits code</div>
+      <div className="text-[11.5px] text-fg2 leading-[1.5]">
+        While the agent is authoring an extension or glue widget, decide how much real-estate it gets. Switch any time.
+      </div>
+
+      <div className="flex flex-col gap-2 mt-1">
+        <Row title="Show a chip in chat" badge="default"
+             sub="Inline ‘Editing hacker-news/ · 2 files’ chip in the chat thread. Click it to open the editor on demand. The chat dock stays the primary surface." />
+        <Row active title="Open the editor in a side panel"
+             sub="A 520-px side panel slides in next to the dock the moment the agent writes its first line. Shows a tab strip across the files in the folder; new files get a ‘+’ mark. Streams syntax-highlighted edits in real time." />
+        <Row title="Open and focus"
+             sub="The side panel becomes a centred sheet that takes attention. Use when you're explicitly co-authoring with the agent and want to read every file as it lands." />
+      </div>
+
+      <Anno>Side options</Anno>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between rounded-[10px] p-3" style={{ background: "var(--bg-card)", border: "1px solid var(--stroke-soft)" }}>
+          <div className="flex flex-col gap-0.5">
+            <div className="text-[12.5px] text-fg1">Pause agent when I'm reading</div>
+            <div className="text-[10.5px] text-fg2">After a write lands, hold the next tool-call until I look away or hit Continue.</div>
+          </div>
+          <div className="relative w-[36px] h-[20px] rounded-[10px]" style={{ background: "var(--color-green)" }}>
+            <div className="absolute top-[2px] w-[16px] h-[16px] rounded-full bg-white" style={{ left: 18, boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+          </div>
+        </div>
+        <div className="flex items-center justify-between rounded-[10px] p-3" style={{ background: "var(--bg-card)", border: "1px solid var(--stroke-soft)" }}>
+          <div className="flex flex-col gap-0.5">
+            <div className="text-[12.5px] text-fg1">Auto-close when turn ends</div>
+            <div className="text-[10.5px] text-fg2">Dismiss the panel as soon as the agent stops writing. Off keeps it open for review.</div>
+          </div>
+          <div className="relative w-[36px] h-[20px] rounded-[10px]" style={{ background: "var(--fg4)" }}>
+            <div className="absolute top-[2px] left-[2px] w-[16px] h-[16px] rounded-full bg-white" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1"></div>
+
+      <div className="rounded-[10px] p-3 flex items-start gap-2.5" style={{ background: "var(--bg-card)", border: "1px solid var(--stroke-soft)" }}>
+        <I n="info" c="w-3.5 h-3.5 text-accent shrink-0 mt-0.5" />
+        <div className="text-[11px] text-fg2 leading-[1.55]">
+          On iOS the editor opens as a bottom sheet over the canvas. The chip-only option is the default there to preserve chat space.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ───── Shared bits for the windowed views ───── */
+function MacBar({ title }) {
+  return (
+    <div className="mac-titlebar">
+      <div className="mac-light r"></div>
+      <div className="mac-light y"></div>
+      <div className="mac-light g"></div>
+      <div className="flex-1 text-center text-[11.5px] font-semibold text-fg2">{title}</div>
+      <div style={{ width: 42 }}></div>
+    </div>
+  );
+}
+
+function ChatBubble({ author = "agent", children }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="text-[10px] font-mono text-fg3">{author}</div>
+      <div className="text-[12px] text-fg1 leading-[1.55]">{children}</div>
+    </div>
+  );
+}
+
+function DiffCard({ filename, runtime }) {
+  return (
+    <div className="rounded-[10px] overflow-hidden" style={{ border: "1px solid var(--stroke-soft)" }}>
+      <div className="flex items-center gap-2 px-3 py-2" style={{ background: "var(--bg-card-elevated)" }}>
+        <I n="file-code" c="w-3.5 h-3.5 text-purple" />
+        <div className="text-[11.5px] font-mono text-fg1 flex-1">{filename}</div>
+        {runtime && <span className={`rt-chip rt-${runtime}`}>{runtime}</span>}
+        <span className="text-[10px] font-mono text-fg3">+34 −2</span>
+      </div>
+      <div className="diff" style={{ borderRadius: 0, borderLeft: 0, borderRight: 0, borderBottom: 0 }}>
+        <div className="row"><span className="gut">12</span><span className="ed-mute">export async function fetchFeed(input, ctx) {'{'}</span></div>
+        <div className="row del"><span className="gut del">−</span><span>{`  const url = input.url;`}</span></div>
+        <div className="row add"><span className="gut add">+</span><span>{`  const { url, limit = 25 } = input;`}</span></div>
+        <div className="row add"><span className="gut add">+</span><span>{`  const res = await ctx.fetch(url, { signal: ctx.signal });`}</span></div>
+        <div className="row add"><span className="gut add">+</span><span>{`  if (!res.ok) throw new Error('HTTP ' + res.status);`}</span></div>
+        <div className="row"><span className="gut">15</span><span className="ed-mute">{`  ...`}</span></div>
+      </div>
+      <div className="flex items-center gap-1 p-2" style={{ borderTop: "1px solid var(--stroke-hairline)", background: "var(--bg-card)" }}>
+        <button className="text-[10.5px] font-semibold py-1 px-2 rounded-full text-fg2 bg-transparent cursor-pointer flex items-center gap-1" style={{ border: "1px solid var(--stroke-soft)" }}>
+          <I n="eye" c="w-3 h-3" />Preview
+        </button>
+        <span className="flex-1"></span>
+        <button className="text-[10.5px] font-semibold py-1 px-2 rounded-full text-fg3 bg-transparent cursor-pointer">Reject</button>
+        <button className="text-[10.5px] font-semibold py-1 px-2 rounded-full text-white border-none cursor-pointer" style={{ background: "var(--color-accent)" }}>Apply</button>
+      </div>
+    </div>
+  );
+}
+
+/* A folder card — shown in chat when the agent has touched multiple files
+   in one extension folder. Click to drill into the editor. */
+function FolderCard({ folder, runtime, files }) {
+  return (
+    <div className="rounded-[10px] overflow-hidden" style={{ border: "1px solid var(--stroke-soft)" }}>
+      <div className="flex items-center gap-2 px-3 py-2" style={{ background: "var(--bg-card-elevated)" }}>
+        <I n="folder" c="w-3.5 h-3.5 text-accent" />
+        <div className="text-[11.5px] font-mono text-fg1 flex-1">{folder}/</div>
+        {runtime && <span className={`rt-chip rt-${runtime}`}>{runtime}</span>}
+        <span className="text-[10px] font-mono text-fg3">{files.length} files</span>
+      </div>
+      <div className="px-2 py-1.5 flex flex-col">
+        {files.map(f => (
+          <div key={f.name} className="flex items-center gap-2 px-1.5 py-1 rounded">
+            <I n="file-code" c={`w-3 h-3 ${f.kind === "new" ? "text-green" : "text-fg3"}`} />
+            <span className="text-[11px] font-mono text-fg1 flex-1 truncate">{f.name}</span>
+            {f.kind === "new"
+              ? <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded" style={{ background: "rgba(48,209,88,0.14)", color: "var(--color-green)" }}>new</span>
+              : <span className="text-[9.5px] font-mono text-fg3">{f.diff}</span>}
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-1 p-2" style={{ borderTop: "1px solid var(--stroke-hairline)", background: "var(--bg-card)" }}>
+        <button className="text-[10.5px] font-semibold py-1 px-2 rounded-full text-fg2 bg-transparent cursor-pointer flex items-center gap-1" style={{ border: "1px solid var(--stroke-soft)" }}>
+          <I n="folder-open" c="w-3 h-3" />Open in editor
+        </button>
+        <span className="flex-1"></span>
+        <button className="text-[10.5px] font-semibold py-1 px-2 rounded-full text-fg3 bg-transparent cursor-pointer">Reject all</button>
+        <button className="text-[10.5px] font-semibold py-1 px-2 rounded-full text-white border-none cursor-pointer" style={{ background: "var(--color-accent)" }}>Apply all</button>
+      </div>
+    </div>
+  );
+}
+
+function FakeCanvas() {
+  // Three widgets and a dot grid background, dimmed since the editor is the focus
+  const Widget = ({ title, body, accent }) => (
+    <div className="rounded-[14px] p-3 flex flex-col gap-1" style={{ background: "var(--bg-card)", border: "1px solid var(--stroke-soft)" }}>
+      <div className="text-[10px] font-mono text-fg3">{title}</div>
+      <div className={`text-[18px] font-semibold ${accent || "text-fg1"}`} style={{ letterSpacing: "-0.022em" }}>{body}</div>
+    </div>
+  );
+  return (
+    <div className="w-full h-full grid grid-cols-3 gap-3 p-4" style={{
+      background: "var(--bg-window)",
+      backgroundImage: "radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)",
+      backgroundSize: "24px 24px",
+    }}>
+      <Widget title="@weather" body="68°F" accent="text-fg1" />
+      <Widget title="@market" body="$224.18" accent="text-green" />
+      <Widget title="@today" body="3 events" />
+    </div>
+  );
+}
+
+/* ───── 2. Off / default — chip in chat ───── */
+function OffArtboard() {
+  return (
+    <div className="w-full h-full p-3" style={{ background: "var(--bg-base)" }}>
+      <div className="mac-window w-full h-full flex flex-col">
+        <MacBar title="gen-app · Trading" />
+        <div className="flex flex-1 min-h-0">
+          {/* Canvas */}
+          <div className="flex-1 min-w-0" style={{ background: "var(--bg-window)" }}>
+            <FakeCanvas />
+          </div>
+
+          {/* Chat dock */}
+          <div className="w-[360px] shrink-0 flex flex-col" style={{ background: "var(--bg-card)", borderLeft: "1px solid var(--stroke-hairline)" }}>
+            <div className="px-3 py-2.5 flex items-center gap-2" style={{ borderBottom: "1px solid var(--stroke-hairline)" }}>
+              <I n="message-circle" c="w-3.5 h-3.5 text-accent" />
+              <div className="text-[12px] font-semibold text-fg1">Chat · Trading</div>
+              <span className="flex-1"></span>
+              <I n="more-horizontal" c="w-3.5 h-3.5 text-fg3" />
+              <I n="chevron-down" c="w-3.5 h-3.5 text-fg3" />
+            </div>
+            <div className="flex-1 min-h-0 overflow-hidden p-3 flex flex-col gap-3">
+              <ChatBubble author="you">add a hacker-news widget that lists the top 5 posts</ChatBubble>
+              <ChatBubble author="agent">
+                Drafting an extension for it. I'll wire it into a glue widget when it compiles.
+              </ChatBubble>
+              <div className="text-[10px] font-mono text-fg3 inline-flex items-center gap-1.5">
+                <span className="chat-chip active"><I n="folder" c="w-3 h-3" />Editing <span className="text-fg1">hacker-news/</span> · 2 files<span className="pdot running" style={{ marginLeft: 2 }}></span></span>
+              </div>
+              <FolderCard
+                folder="extensions/hacker-news"
+                runtime="worker"
+                files={[
+                  { name: "manifest.json", kind: "new" },
+                  { name: "index.ts",      kind: "new" },
+                ]}
+              />
+              <ChatBubble author="agent">
+                Calls hn.algolia.com. <span className="chat-chip">Will install · hacker-news v0.1.0</span>
+              </ChatBubble>
+            </div>
+
+            {/* Composer */}
+            <div className="p-2.5 flex items-center gap-2" style={{ borderTop: "1px solid var(--stroke-hairline)" }}>
+              <input placeholder="Ask the model to change them…" className="flex-1 bg-transparent text-[12px] text-fg1 outline-none" style={{ border: "none" }} />
+              <button className="rounded-full w-7 h-7 inline-flex items-center justify-center text-white border-none cursor-pointer" style={{ background: "var(--color-accent)" }}>
+                <I n="arrow-up" c="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ───── 3. Live editor — side panel mode ───── */
+function LiveEditorArtboard() {
+  // Streaming code block. Marked lines are "new" + a caret at the bottom.
+  const lines = [
+    { n: 1,  el: <><span className="ed-cmt">{`// hacker-news.ts — pulls top posts from HN's Algolia search`}</span></> },
+    { n: 2,  el: <><span className="ed-mute">{` `}</span></> },
+    { n: 3,  el: <><span className="ed-kw">export const</span><span className="ed-mute"> manifest </span><span className="ed-kw">=</span><span className="ed-mute">{` {`}</span></>, fresh: true },
+    { n: 4,  el: <><span className="ed-mute">{`  id: `}</span><span className="ed-str">{`'hacker-news'`}</span><span className="ed-mute">{`,`}</span></>, fresh: true },
+    { n: 5,  el: <><span className="ed-mute">{`  name: `}</span><span className="ed-str">{`'Hacker News'`}</span><span className="ed-mute">{`,`}</span></>, fresh: true },
+    { n: 6,  el: <><span className="ed-mute">{`  version: `}</span><span className="ed-str">{`'0.1.0'`}</span><span className="ed-mute">{`,`}</span></>, fresh: true },
+    { n: 7,  el: <><span className="ed-mute">{`  capabilities: [`}</span><span className="ed-str">{`'network'`}</span><span className="ed-mute">{`],`}</span></>, fresh: true },
+    { n: 8,  el: <><span className="ed-mute">{`  permissions: { network: [`}</span><span className="ed-str">{`'hn.algolia.com'`}</span><span className="ed-mute">{`] },`}</span></>, fresh: true },
+    { n: 9,  el: <><span className="ed-mute">{`  providers: [`}</span></>, fresh: true },
+    { n: 10, el: <><span className="ed-mute">{`    { name: `}</span><span className="ed-str">{`'top'`}</span><span className="ed-mute">{`, description: `}</span><span className="ed-str">{`'Top posts'`}</span><span className="ed-mute">{` },`}</span></>, fresh: true },
+    { n: 11, el: <><span className="ed-mute">{`  ],`}</span></>, fresh: true },
+    { n: 12, el: <><span className="ed-mute">{`};`}</span></>, fresh: true },
+    { n: 13, el: <><span className="ed-mute">{` `}</span></> },
+    { n: 14, el: <><span className="ed-kw">export const</span><span className="ed-mute"> providers </span><span className="ed-kw">=</span><span className="ed-mute">{` {`}</span></>, fresh: true },
+    { n: 15, el: <><span className="ed-mute">{`  top: `}</span><span className="ed-kw">async</span><span className="ed-mute">{` (`}</span><span className="ed-mute">input, ctx</span><span className="ed-mute">{`) => {`}</span></>, fresh: true },
+    { n: 16, el: <><span className="ed-mute">{`    `}</span><span className="ed-kw">const</span><span className="ed-mute">{` r = `}</span><span className="ed-kw">await</span><span className="ed-mute"> ctx.</span><span className="ed-fn">fetch</span><span className="ed-mute">{`(`}</span><span className="ed-str">{`'https://hn.algolia.com/api/v1/search?tags=front_page'`}</span><span className="ed-mute">{`);`}</span></>, fresh: true },
+    { n: 17, el: <><span className="ed-mute">{`    `}</span><span className="ed-kw">return</span><span className="ed-mute"> JSON.</span><span className="ed-fn">parse</span><span className="ed-mute">{`(r.body).hits.`}</span><span className="ed-fn">slice</span><span className="ed-mute">{`(`}</span><span className="ed-num">0</span><span className="ed-mute">{`, `}</span><span className="ed-num">5</span><span className="ed-mute">{`)`}</span><span className="caret"></span></>, fresh: true, caret: true },
+  ];
+
+  return (
+    <div className="w-full h-full p-3" style={{ background: "var(--bg-base)" }}>
+      <div className="mac-window w-full h-full flex flex-col">
+        <MacBar title="gen-app · Trading" />
+        <div className="flex flex-1 min-h-0">
+          {/* Canvas — dimmed in the background */}
+          <div className="flex-1 min-w-0 opacity-60" style={{ background: "var(--bg-window)" }}>
+            <FakeCanvas />
+          </div>
+
+          {/* Side panel — editor */}
+          <div className="w-[520px] shrink-0 flex flex-col" style={{ background: "var(--bg-card)", borderLeft: "1px solid var(--stroke-soft)", boxShadow: "var(--elev-3)" }}>
+            {/* Editor header */}
+            <div className="px-3 py-2 flex items-center gap-2" style={{ borderBottom: "1px solid var(--stroke-hairline)" }}>
+              <I n="folder" c="w-3.5 h-3.5 text-accent" />
+              <div className="text-[12px] font-mono text-fg1">extensions/hacker-news/</div>
+              <span className="rt-chip rt-worker">worker</span>
+              <span className="flex-1"></span>
+              <button className="text-fg2 p-1 bg-transparent border-none cursor-pointer" title="Pause agent"><I n="pause" c="w-3.5 h-3.5" /></button>
+              <button className="text-fg2 p-1 bg-transparent border-none cursor-pointer" title="Pop out"><I n="external-link" c="w-3.5 h-3.5" /></button>
+              <button className="text-fg2 p-1 bg-transparent border-none cursor-pointer" title="Close (esc)"><I n="x" c="w-3.5 h-3.5" /></button>
+            </div>
+
+            {/* File tab strip — surface that extensions are folders, not single files */}
+            <div className="flex items-stretch gap-0" style={{ borderBottom: "1px solid var(--stroke-hairline)", background: "var(--bg-card-elevated)" }}>
+              <button className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono cursor-pointer bg-transparent border-none" style={{ color: "var(--fg2)", borderRight: "1px solid var(--stroke-hairline)" }}>
+                <I n="file-code" c="w-3 h-3 text-green" />
+                manifest.json
+                <span className="text-[9px] px-1 py-0.5 rounded" style={{ background: "rgba(48,209,88,0.14)", color: "var(--color-green)" }}>new</span>
+              </button>
+              <button className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono cursor-pointer border-none" style={{ color: "var(--fg1)", background: "var(--bg-card)", borderRight: "1px solid var(--stroke-hairline)", borderBottom: "2px solid var(--color-accent)", marginBottom: -1 }}>
+                <I n="file-code" c="w-3 h-3 text-purple" />
+                index.ts
+                <span className="pdot running"></span>
+              </button>
+              <button className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono cursor-pointer bg-transparent border-none text-fg3" title="Not edited this turn">
+                <I n="file-code" c="w-3 h-3" />
+                deno.json
+              </button>
+              <span className="flex-1"></span>
+              <button className="p-1.5 text-fg3 bg-transparent border-none cursor-pointer" title="New file"><I n="plus" c="w-3 h-3" /></button>
+            </div>
+
+            {/* Live agent status row */}
+            <div className="px-3 py-1.5 flex items-center gap-2" style={{ background: "rgba(48,209,88,0.08)", borderBottom: "1px solid var(--stroke-hairline)" }}>
+              <span className="pdot running"></span>
+              <div className="text-[11px] font-mono text-green">Agent is writing…</div>
+              <span className="text-fg4">·</span>
+              <div className="text-[11px] font-mono text-fg2">tool: propose_change · 14s elapsed</div>
+              <span className="flex-1"></span>
+              <button className="text-[10.5px] font-semibold py-0.5 px-2 rounded-full text-orange border-none cursor-pointer" style={{ background: "rgba(255,159,10,0.14)" }}>Pause</button>
+            </div>
+
+            {/* Code body */}
+            <div className="flex-1 min-h-0 overflow-hidden py-2" style={{ background: "var(--bg-base)" }}>
+              {lines.map(l => (
+                <div key={l.n} className={`editor-line ${l.fresh ? "ed-new" : ""}`}>
+                  <span className="ln">{l.n}</span>
+                  <span>{l.el}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Footer / actions */}
+            <div className="px-3 py-2 flex items-center gap-2" style={{ borderTop: "1px solid var(--stroke-hairline)" }}>
+              <I n="git-branch" c="w-3 h-3 text-fg3" />
+              <span className="text-[10.5px] font-mono text-fg3">draft · not saved</span>
+              <span className="text-fg4">·</span>
+              <span className="text-[10.5px] font-mono text-fg3">+18 −0</span>
+              <span className="flex-1"></span>
+              <button className="text-[10.5px] font-semibold py-1 px-2 rounded-full text-fg2 bg-transparent cursor-pointer" style={{ border: "1px solid var(--stroke-soft)" }}>Reject all</button>
+              <button className="text-[10.5px] font-semibold py-1 px-2.5 rounded-full text-white border-none cursor-pointer" style={{ background: "var(--color-accent)" }}>Apply & test</button>
+            </div>
+          </div>
+
+          {/* Chat dock — still present, narrowed */}
+          <div className="w-[280px] shrink-0 flex flex-col" style={{ background: "var(--bg-card)", borderLeft: "1px solid var(--stroke-hairline)" }}>
+            <div className="px-3 py-2.5 flex items-center gap-2" style={{ borderBottom: "1px solid var(--stroke-hairline)" }}>
+              <I n="message-circle" c="w-3.5 h-3.5 text-accent" />
+              <div className="text-[12px] font-semibold text-fg1">Chat</div>
+              <span className="flex-1"></span>
+              <I n="chevron-down" c="w-3.5 h-3.5 text-fg3" />
+            </div>
+            <div className="flex-1 min-h-0 p-3 flex flex-col gap-3 overflow-hidden">
+              <ChatBubble author="you">add a hacker-news widget that lists the top 5 posts</ChatBubble>
+              <ChatBubble author="agent">
+                Drafting <span className="chat-chip active"><I n="file-code" c="w-3 h-3" />hacker-news.ts<span className="pdot running" style={{ marginLeft: 2 }}></span></span>
+              </ChatBubble>
+              <div className="text-[10px] font-mono text-fg3 leading-[1.55]">
+                ↳ writing manifest · adding `top` provider · wiring to glue widget…
+              </div>
+            </div>
+            <div className="p-2.5 flex items-center gap-2" style={{ borderTop: "1px solid var(--stroke-hairline)" }}>
+              <input disabled placeholder="Agent is writing — wait or Pause" className="flex-1 bg-transparent text-[11px] text-fg3 outline-none" style={{ border: "none" }} />
+              <I n="loader" c="w-3.5 h-3.5 text-fg3" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ───── 4. iOS — bottom-sheet variant ───── */
+function IosArtboard() {
+  return (
+    <div className="w-full h-full flex items-start justify-center p-4" style={{ background: "var(--bg-base)" }}>
+      <div className="flex flex-col" style={{
+        width: 360, height: 640,
+        background: "var(--bg-window)",
+        borderRadius: 36,
+        border: "8px solid #111",
+        overflow: "hidden",
+        boxShadow: "var(--elev-4)",
+      }}>
+        {/* iOS status bar */}
+        <div className="flex items-center justify-between px-6 pt-3 pb-1 text-[10.5px] font-semibold text-fg1">
+          <span>9:41</span>
+          <div className="w-20 h-5 bg-black rounded-full"></div>
+          <span className="flex items-center gap-1"><I n="signal" c="w-3 h-3" /><I n="wifi" c="w-3 h-3" /><I n="battery-full" c="w-3.5 h-3.5" /></span>
+        </div>
+
+        {/* nav */}
+        <div className="px-4 pt-1 pb-2 flex items-center gap-2">
+          <I n="layout-grid" c="w-4 h-4 text-fg2" />
+          <span className="text-[15px] font-semibold text-fg1">Trading</span>
+          <span className="flex-1"></span>
+          <I n="settings" c="w-4 h-4 text-fg2" />
+        </div>
+
+        {/* canvas — dim */}
+        <div className="flex-1 min-h-0 opacity-50 px-3 flex flex-col gap-2">
+          <div className="rounded-[14px] p-3" style={{ background: "var(--bg-card)", border: "1px solid var(--stroke-soft)" }}>
+            <div className="text-[10px] font-mono text-fg3">@weather</div>
+            <div className="text-[20px] font-semibold text-fg1">68°F</div>
+          </div>
+          <div className="rounded-[14px] p-3" style={{ background: "var(--bg-card)", border: "1px solid var(--stroke-soft)" }}>
+            <div className="text-[10px] font-mono text-fg3">@market</div>
+            <div className="text-[20px] font-semibold text-green">$224.18</div>
+          </div>
+        </div>
+
+        {/* bottom sheet — editor */}
+        <div className="flex flex-col" style={{
+          background: "var(--bg-card)",
+          borderTop: "1px solid var(--stroke-soft)",
+          borderTopLeftRadius: 18, borderTopRightRadius: 18,
+          maxHeight: 320,
+          boxShadow: "0 -10px 30px rgba(0,0,0,0.4)",
+        }}>
+          {/* grabber */}
+          <div className="flex items-center justify-center pt-2 pb-1">
+            <div className="w-9 h-1 rounded-full" style={{ background: "var(--fg4)" }}></div>
+          </div>
+          <div className="px-3 pb-1.5 flex items-center gap-2">
+            <I n="folder" c="w-3.5 h-3.5 text-accent" />
+            <div className="text-[11.5px] font-mono text-fg1 truncate">hacker-news/</div>
+            <span className="rt-chip rt-worker">worker</span>
+            <span className="flex-1"></span>
+            <span className="pdot running"></span>
+          </div>
+
+          {/* File pill strip */}
+          <div className="px-3 pb-2 flex items-center gap-1.5 overflow-x-auto">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full" style={{ background: "rgba(48,209,88,0.14)", color: "var(--color-green)" }}>manifest.json</span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full inline-flex items-center gap-1" style={{ background: "var(--color-accent-tint)", color: "var(--color-accent)" }}>index.ts<span className="pdot running" style={{ width: 5, height: 5 }}></span></span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full text-fg3" style={{ background: "var(--bg-card-elevated)" }}>deno.json</span>
+          </div>
+
+          <div className="flex-1 min-h-0 overflow-hidden py-1.5" style={{ background: "var(--bg-base)" }}>
+            {[
+              [3, <><span className="ed-kw">export const</span><span className="ed-mute"> manifest </span><span className="ed-kw">=</span><span className="ed-mute">{` {`}</span></>],
+              [4, <><span className="ed-mute">{`  id: `}</span><span className="ed-str">{`'hacker-news'`}</span><span className="ed-mute">{`,`}</span></>],
+              [5, <><span className="ed-mute">{`  capabilities: [`}</span><span className="ed-str">{`'network'`}</span><span className="ed-mute">{`],`}</span></>],
+              [6, <><span className="ed-mute">{`  permissions: { network: [`}</span><span className="ed-str">{`'hn.algolia.com'`}</span><span className="ed-mute">{`] }`}<span className="caret" /></span></>],
+            ].map(([n, el]) => (
+              <div key={n} className="editor-line ed-new">
+                <span className="ln">{n}</span>
+                <span>{el}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="px-3 py-2 flex items-center gap-2" style={{ borderTop: "1px solid var(--stroke-hairline)" }}>
+            <span className="text-[10.5px] font-mono text-green flex items-center gap-1.5"><span className="pdot running"></span>writing</span>
+            <span className="flex-1"></span>
+            <button className="text-[10.5px] font-semibold py-1 px-2 rounded-full text-fg2 bg-transparent cursor-pointer" style={{ border: "1px solid var(--stroke-soft)" }}>Pause</button>
+            <button className="text-[10.5px] font-semibold py-1 px-2 rounded-full text-white border-none cursor-pointer" style={{ background: "var(--color-accent)" }}>Open full</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ───── Canvas root ───── */
+function App() {
+  React.useEffect(() => {
+    const tick = () => window.lucide && window.lucide.createIcons();
+    tick();
+    const t = setInterval(tick, 250);
+    setTimeout(() => clearInterval(t), 4000);
+  }, []);
+
+  return (
+    <DesignCanvas title="Live editor — agent authoring extensions in chat" subtitle="Behind a setting; three modes shown.">
+      <DCSection id="setting" title="The setting" subtitle="Settings → Developer → Live coding. Three modes; default is the lightest.">
+        <DCArtboard id="setting" label="Setting panel" width={500} height={720}>
+          <SettingArtboard />
+        </DCArtboard>
+        <DCPostIt>
+          New Developer section (or inside Extensions). The active row in the mockup is the middle option — "open the editor in a side panel" — which feels like the right default once the feature is wired.
+        </DCPostIt>
+      </DCSection>
+
+      <DCSection id="off" title="Mode 1 · Chip in chat (default)" subtitle="Today's flow. Editor only opens on demand.">
+        <DCArtboard id="off" label="Chat shows a chip; canvas stays primary" width={1180} height={700}>
+          <OffArtboard />
+        </DCArtboard>
+        <DCPostIt>
+          Editor opens only if you click the green <code>Editing hacker-news/</code> chip. Cheapest path; closest to today. A turn that touches multiple files renders one folder card with file rows inside.
+        </DCPostIt>
+      </DCSection>
+
+      <DCSection id="on" title="Mode 2 · Side panel (proposed default)" subtitle="Editor slides in from the right when the agent writes its first line.">
+        <DCArtboard id="on" label="Side panel + dock + dimmed canvas" width={1320} height={740}>
+          <LiveEditorArtboard />
+        </DCArtboard>
+        <DCPostIt>
+          Canvas dims to 60% so the editor and chat read as the active surfaces. The file tab strip surfaces that the folder — not a single file — is the unit; the agent jumps between tabs as it writes. Pause holds the next tool call; Pop-out detaches as a window.
+        </DCPostIt>
+      </DCSection>
+
+      <DCSection id="ios" title="iOS — bottom sheet" subtitle="No side panel on phone; the editor docks to the bottom over a dimmed canvas.">
+        <DCArtboard id="ios" label="iPhone · bottom-sheet editor" width={420} height={720}>
+          <IosArtboard />
+        </DCArtboard>
+        <DCPostIt>
+          iOS default stays chip-only; "Open full" promotes to a full-screen editor.
+        </DCPostIt>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

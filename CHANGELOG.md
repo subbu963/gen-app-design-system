@@ -8,6 +8,58 @@ _Nothing yet — next change lands here._
 
 ---
 
+## [0.7.0] — 2026-05-28
+
+The "deno sandbox" release. Phase 1 of the `phase1/edge-extensions` branch landed a second extension sandbox — a long-lived `deno run` subprocess per extension, alongside the legacy Web Worker. The design system follows: a new runtime chip orthogonal to the kind chip, process-state on every deno row, and a runtime detail sheet that codifies the lifecycle/network/log triad. Bundled clock + weather both ship in deno flavour now; the iOS fallback path stays worker-only.
+
+### Added
+- **Runtime chip.** New 9.5px mono pill orthogonal to the existing kind chip — `worker` (gray, in-webview, iOS-safe) or `deno` (green, subprocess sandbox, desktop). Pairs with the kind chip on every Extensions row in the order *kind → runtime*. Documented in README § Extension runtimes; the existing kind-chip vocabulary is preserved (it keeps carrying authorship).
+- **Process-status dot.** 7px circle next to the runtime chip on every deno row: green pulse = running, gray = idle, faded = stopped, red = crashed / backoff. Re-used inside the runtime detail sheet and surfaceable in the Logs viewer. CSS keyframe `pulse` lives in the previews; promote to a token when a second consumer lands.
+- **Runtime detail sheet** — new preview `extension-runtime-detail.html`. Drill-in from a deno row: header + status strip (pid · uptime · Restart · Stop) + a two-column **Runtime / Resources** read-out (spec, port, idle stop, cold start, restart count · memory bar, disk bar, data-dir path) + lifecycle controls (idle-stop slider, hot-reload toggle, memory-ceiling segmented `128 / 256 / 512 / 1024 MB`) + network-allowlist read-out (host pills mirroring `manifest.permissions.network`) + recent stderr feed (mono, last 5 lines, info/warn/err colored). Three small **state cards** below cover idle / backing-off / stopped variants. iOS side shows the soft-disabled "Runs on Mac only" rationale block (App Store 2.5.2) with two alternatives (remote MCP / re-author as worker) and a last-cached-data line so the widget doesn't go blank on iPhone.
+- **Allowlist host pill.** 10.5px mono pill on a neutral background, one per entry in `manifest.permissions.network`. Read-only in the runtime detail; this is what the host's per-extension HTTPS proxy enforces.
+- **`runtime: 'deno'` vocabulary throughout copy.** Section names and tooltips spell the runtime explicitly: "runs on Mac only", "deno · v2.1.0", "deno cache warm · 38ms". Numbers in copy quote the literals from `ext_runtime.rs` (`MAX_CONCURRENT = 16`, disabled after 5 crashes, 2s SIGTERM grace, default 5-min idle stop) — keep them in sync.
+
+### Reworked
+- **`settings-extensions.html`** — every row now carries both chips (kind + runtime); bundled `Open-Meteo` and `Clock` flip to `deno · running` to reflect the new bundled-deno install (`BUNDLED_DENO_EXTENSIONS` + `extInstall` on app launch). A new **user · deno** row (Notes index · PGlite · 14 MB · idle) demonstrates the user-authored deno path. iOS panel now soft-disables both bundled deno rows with a "runs on Mac only" caption; "5 installed · 4 enabled" → "6 installed · 5 enabled · 3 on deno". Header copy reframed to "Three kinds of extension, two runtimes, one list".
+- **README** — new **Extension runtimes** section between Iconography and Component inventory; component inventory grows four atoms (runtime chip, process-status dot, runtime detail sheet, allowlist host pill); answered open question 6 gains the runtime-chip distinction; two new open questions added (8: deno authoring entry point; 9: bundle weight).
+- **SKILL.md** — version bumped, runtimes flagged in "What's flagged" so authors don't accidentally suggest `runtime: 'deno'` to iOS-targeting users.
+
+### Flagged
+- **Deno authoring CTA.** The Developer panel covers spawn/bind/respond/SIGTERM diagnostics, but there's no first-class "New deno extension" template flow yet. Until that ships, the **+ New extension** CTA in `settings-extensions.html` continues to default to `worker`. README open question 8 tracks this.
+- **Bundle weight.** Shipping `deno` for both archs grows the `.app` by ~240 MB; universal lipo-join roughly halves it. Decision is release engineering's, not design's, but the runtime detail copy assumes a single shipped binary today. README open question 9 tracks this.
+- **`worker` deprecation timeline.** With deno covering everything desktop, the worker runtime survives only for iOS and legacy single-file user extensions. We are NOT marking `worker` rows as "legacy" in the UI yet — flagging the second-class status before iOS deno is impossible is a footgun. Re-evaluate once user-authored deno authoring is real.
+- **MCP × runtime chip interaction.** Today MCP rows show only the kind chip (`npm · stdio` / `http · oauth`) — adding a `runtime: child-process` chip would be redundant. Left as-is; revisit if a fourth MCP transport lands.
+
+---
+
+## [0.6.0] — 2026-05-23
+
+The "MCP as extensions" release. The Tauri app had drifted past the system on three big surfaces — MCP install + auth, per-provider spend, HuggingFace model picking, canvas archives, and the manual glue editor — this version closes all of it.
+
+### Added
+- **Install MCP server — wizard.** New preview `install-mcp-sheet.html`. A multi-step sheet with a transport segmented (`stdio (npm)` / `Remote (HTTP)`), per-transport bodies (npm package + args + env-secret lines, or endpoint URL + Probe), an auth segmented (`None` / `Bearer` / `OAuth`), and an installed-summary terminal state listing the synthesized providers. Codifies the **multi-step config sheet** pattern — segmented header → per-step body → terminal state.
+- **MCP auth picker.** New preview `mcp-auth-picker.html` covering all six runtime states: `none`, `bearer` (token-from-secret), `oauth` × 4 states (authorized HTTP, authorized stdio + env-var bridge, in-progress browser handoff, denied). Adds the **auth-status row** atom — small Lucide shield variant + issuer + scopes/footnote. Green / orange / red carry authorized / in-progress / failed.
+- **MCP tools sheet.** New preview `mcp-tools-sheet.html` — drill-in from an MCP row, lists every synthesized provider as a card with name + description + pretty-printed JSON-Schema input. The **spec viewer** block (`pre.spec` with cyan keys, green strings, orange numbers, italic comments) is now a reusable atom — same one carries Glue's "Live spec" tab and any future schema view.
+- **Per-provider spend ceiling + gate-error states.** `settings-providers.html` reworked: the 0.4.0 "Request budget" sub-section is now a list with one row per provider, each showing exact-vs-estimated USD, a thin progress bar, and a red "at ceiling" state when `checkBudgetGate` refuses. Adds two new dock states next to it — **rate-limited composer** (send button → countdown chip) and **budget-refused error** (inline orange info row in the chat, never a modal, always offers two next steps).
+- **Local model picker (HuggingFace).** New preview `model-picker-modal.html`. Three states side by side: empty hero ("no model on disk"), HuggingFace search (repo cards with per-file quant chips q4/q5/q6/q8/f16), and on-disk list with the active model. Adds the canonical **long-running progress row** atom — filename + quant chip + percent + Cancel on row 1, 4px bar in row 2, mono "current / total · rate · ETA" in row 3. Reusable for MCP `npx` warm-up, canvas zip imports, anything streamed.
+- **Logs source filter + Export .zip.** `settings-logs.html` reworked: source-toggle chips (`all` / `harness` / `mcp` / `glue` / `canvas` / `logs` / `app`) with per-source counts above the stream, plus an **Export .zip** action that bundles `events.json` + `events.ndjson` + an env-snapshot `meta.json`. Sample event lines for every subsystem so the visual rhythm is documented (MCP child spawn, glue runtime mount, harness rate-limit warn, MCP child exit error → respawn).
+- **Canvas export / import.** New preview `canvas-archive.html`. Replaces the 0.4.1 "Export transcript (stub)" with three things: dock `⋯` menu rework (Export canvas… / Import canvas…), zip anatomy card (`canvas.json` + `extensions/<id>.js` + `meta.json`), and an **import-resolution sheet** grouping incoming items into three states — green "will re-install / already installed", orange "needs your attention" (MCP re-auth) — plus an inline conflict-resolution footnote ("A canvas named X already exists. We'll create …"). Codifies the rule: **never block import**; degraded items stay degraded until the user resolves them inline.
+- **Glue editor — manual mode.** New preview `glue-editor-manual.html`. Counterpart to `glue-ai-authoring.html`: same chrome (breadcrumb, meta header, tab strip), but the right pane swaps the chat dock for a **live preview** running in a parallel `GlueWidgetRuntime`. Adds the **props bar** above the preview (lets users feed sample inputs without touching source) and the "Ask AI" toggle that pivots back to the AI mode.
+- **Extension kind chips.** `settings-extensions.html` reworked: every row now carries a kind chip — `bundled` (gray-outlined), `user` (purple tint), `npm · stdio` (orange tint), `http · oauth` (accent tint) — and per-kind trailing affordances (pencil for user, list-tree + more for MCP, nothing for bundled). Adds "+ New extension" + "+ Install MCP server" CTAs in the header.
+
+### Reworked
+- **`settings-extensions.html`** — kind chips + install CTAs + iOS section split (remote MCPs work everywhere, stdio shows soft-disabled with the App Store 2.5.2 rationale visible).
+- **`settings-providers.html`** — per-provider spend ceiling table replaces single-provider sub-section; throttle + budget states added.
+- **`settings-logs.html`** — source-toggle chips, Export .zip, expanded event vocabulary (MCP / glue / canvas).
+- **Dock `⋯` menu** — `Export canvas` / `Import canvas` promoted; `Export transcript` demoted below a divider with an explicit `.md` hint.
+
+### Flagged
+- **iOS stdio MCP** soft-disable is shipped but the longer-term answer (remote-MCP-only on iOS? prompt-to-install-on-desktop deep link?) is still open.
+- **Conflict resolution on import** — current pattern auto-creates a renamed canvas. A "Replace existing" affordance was deliberately omitted; reconsider once import is in real use.
+- **Re-render on ⌘S** for the manual glue editor matches the AI flow's apply-then-render rhythm. If users want continuous reload, the props bar can grow a "live" toggle later — not added speculatively.
+
+---
+
 ## [0.5.0] — 2026-05-23
 
 The "author your widget" release. Every widget now exposes its source and routes into an AI-powered editor for both its glue and its extensions.

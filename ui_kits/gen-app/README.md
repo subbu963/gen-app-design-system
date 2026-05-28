@@ -14,14 +14,15 @@ The two frames share state — click a widget in either frame to select it; the 
 
 ## Settings
 
-Four sections, named conventionally on desktop and playfully on iOS:
+Five sections, named conventionally on desktop and playfully on iOS:
 
 | Desktop | iOS | What's inside |
 | --- | --- | --- |
 | Providers | **Brains** | Pick the active provider, paste the key, choose the model |
 | Embeddings | **Senses** | Local llama.cpp or remote OpenAI; cache controls |
-| Extensions | **Powers** | Toggle list of sandboxed-worker extensions with version badges |
+| Extensions | **Powers** | Bundled + user-authored + MCP extensions. Every row carries a kind chip and a **runtime chip** (`worker` / `deno` / `child`). Deno + stdio MCP rows pulse a process-status dot. "New extension" opens a small **runtime chooser** sheet first. Worker rows get a `· iOS-safe` footnote on the meta line. |
 | Logs | **Diaries** | Live event stream from chat / widgets / extensions with info/warn/error tagging |
+| About | **About** | App version + build, deno / Tauri / llama.cpp / Claude CLI versions, data folder sizes (open in Finder), log archive Export, and the open-source license list with link to `THIRD_PARTY_NOTICES.md` |
 
 Desktop uses a split sheet (sidebar + detail). iOS uses a nav stack (list → detail → back).
 
@@ -59,7 +60,7 @@ Toggle the Tweaks panel from the toolbar for:
 | `Widget.jsx` | `WidgetShell`, `StatusPill`, and the three demo widgets — `WeatherWidget`, `StockWidget`, `CalendarWidget`, `PendingWidget` |
 | `Canvas.jsx` | `Canvas`, `CanvasEmpty`, `ChatFullscreen` (variant B), `TabBar` |
 | `ChatDock.jsx` | The floating dock used by desktop & variant A |
-| `Settings.jsx` | Four-section settings: Providers / Embeddings / Extensions / Logs · `DesktopSettings` (split sheet) + `IOSSettings` (nav stack) |
+| `Settings.jsx` | Settings panels: Providers / Embeddings / Extensions / Secrets / Logs / **About**. Includes `DesktopSettings` (split sheet), `IOSSettings` (nav stack), the inline `RuntimeChip` / `StatusDot` atoms, the `RuntimeChooserSheet` for new extensions, and the `AboutPanel` with open-source license list. |
 | `Onboarding.jsx` | Three-step first-run flow: welcome → provider → key |
 | `App.jsx` | State machine + Tweaks wiring + mount |
 | `tweaks-panel.jsx` | Tweaks framework (starter component, untouched) |
@@ -88,6 +89,8 @@ Every component here is a visual recreation of what the corresponding Konsta UI 
 - **Multi-select gesture on iOS.** Stubbed — clicking selects, but there's no long-press affordance.
 - **Symbols / tag pickers.** Toolbar `Tag` button is non-functional. See `preview/components-tags.html` for the visual spec.
 - **Real Lucide → SF Symbols swap.** Lucide is used as a web-friendly stand-in; see `assets/iconography.md` for the mapping.
+- **Extension authoring (post-chooser).** The runtime-chooser sheet routes into the legacy `ExtensionEditor` regardless of pick. A real deno-runtime editor (`apps/desktop/src/settings/ExtensionFolderEditor.tsx`) lives in the repo — swap it in when wiring up.
+- **About → license bundle.** The 8 packages in `ABOUT_LICENSES` are illustrative; real builds should generate this from the lockfile + Cargo metadata at bundle time and point the link at the real `THIRD_PARTY_NOTICES.md`.
 
 ## What I'd build next
 
