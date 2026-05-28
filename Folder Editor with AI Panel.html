@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Folder editor · with Ask AI panel</title>
+<link rel="stylesheet" href="colors_and_type.css" />
+<script src="tailwind.js"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-base); color: var(--fg1); font-family: var(--font-sans); }
+  .text-fg1 { color: var(--fg1); } .text-fg2 { color: var(--fg2); } .text-fg3 { color: var(--fg3); } .text-fg4 { color: var(--fg4); }
+  .bg-card { background: var(--bg-card); } .bg-card-elevated { background: var(--bg-card-elevated); } .bg-window { background: var(--bg-window); }
+  .border-hairline { border-color: var(--stroke-hairline); }
+  .border-soft { border-color: var(--stroke-soft); }
+  .text-accent { color: var(--color-accent); } .bg-accent { background: var(--color-accent); }
+  .bg-accent-tint { background: var(--color-accent-tint); }
+  .text-green { color: var(--color-green); } .text-orange { color: var(--color-orange); } .text-purple { color: var(--color-purple); } .text-cyan { color: var(--color-cyan); } .text-yellow { color: var(--color-yellow); }
+  .anno { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; color: var(--fg3); }
+
+  /* Runtime chip */
+  .rt-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 6px; border-radius: 999px; font-family: var(--font-mono); font-size: 9.5px; font-weight: 600; letter-spacing: 0.02em; }
+  .rt-deno { background: rgba(48,209,88,0.14); color: var(--color-green); }
+  .rt-worker { background: var(--bg-card-elevated); color: var(--fg2); border: 1px solid var(--stroke-soft); }
+
+  /* Process dot */
+  .pdot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .pdot.running { background: var(--color-green); box-shadow: 0 0 0 0 rgba(48,209,88,0.45); animation: pulse 2s ease-out infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(48,209,88,0.55); } 70% { box-shadow: 0 0 0 6px rgba(48,209,88,0); } 100% { box-shadow: 0 0 0 0 rgba(48,209,88,0); } }
+
+  /* Editor lines */
+  .editor-line { display: grid; grid-template-columns: 32px 1fr; gap: 8px; font-family: var(--font-mono); font-size: 11.5px; line-height: 1.6; padding: 0 8px; }
+  .editor-line .ln { text-align: right; color: var(--fg4); user-select: none; }
+  .ed-kw  { color: var(--color-purple); }
+  .ed-fn  { color: var(--color-cyan); }
+  .ed-str { color: var(--color-green); }
+  .ed-num { color: var(--color-orange); }
+  .ed-cmt { color: var(--fg3); font-style: italic; }
+  .ed-mute { color: var(--fg2); }
+  .ed-bracket { color: var(--fg2); }
+  .ed-new { background: rgba(48,209,88,0.10); border-left: 2px solid var(--color-green); padding-left: 6px; margin-left: -8px; }
+  .caret { display: inline-block; width: 6px; height: 12px; background: var(--color-accent); vertical-align: -1px; margin-left: 1px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Diff in AI chat */
+  .diff { font-family: var(--font-mono); font-size: 10.5px; line-height: 1.55; border-radius: 6px; overflow: hidden; border: 1px solid var(--stroke-soft); background: var(--bg-window); }
+  .diff .row { padding: 1px 8px; display: grid; grid-template-columns: 14px 1fr; gap: 6px; }
+  .diff .row.add { background: rgba(48,209,88,0.08); color: var(--color-green); }
+  .diff .row.del { background: rgba(255,69,58,0.08); color: var(--color-red); text-decoration: line-through; opacity: 0.85; }
+  .diff .gut    { color: var(--fg4); }
+  .diff .gut.add { color: var(--color-green); }
+  .diff .gut.del { color: var(--color-red); }
+
+  /* Slash command hint */
+  .slash { display: inline-flex; align-items: center; gap: 4px; padding: 1px 6px; border-radius: 4px; font-family: var(--font-mono); font-size: 9.5px; background: var(--bg-card-elevated); color: var(--fg3); border: 1px solid var(--stroke-soft); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard, DCPostIt } = window;
+
+function I({n, c=""}) { return <i data-lucide={n} className={c}></i>; }
+
+/* ─── Reusable bits ─── */
+function ChatBubble({ author, who, children }) {
+  const accent = who === "agent" ? "var(--color-accent)" : "var(--fg3)";
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="text-[10px] font-mono uppercase tracking-[0.06em]" style={{ color: accent }}>{author}</div>
+      <div className="text-[11.5px] text-fg1 leading-[1.55]">{children}</div>
+    </div>
+  );
+}
+
+function FileChip({ name, dot, color="var(--color-cyan)" }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-mono text-[10px]" style={{ background: "var(--bg-card-elevated)", color: "var(--fg2)", border: "1px solid var(--stroke-soft)" }}>
+      <I n="file-code" c="w-2.5 h-2.5" style={{ color }} />
+      {name}
+      {dot && <span className="pdot running" style={{ width: 5, height: 5 }}></span>}
+    </span>
+  );
+}
+
+/* ─── Sample code shown in the editor (streaming the new getHourly provider) ─── */
+const EDITOR_LINES = [
+  { n: 5,  el: <><span className="ed-cmt">{`// Open-Meteo — deno-runtime entry.`}</span></> },
+  { n: 6,  el: <><span className="ed-kw">import</span><span className="ed-mute">{` { startExtension } `}</span><span className="ed-kw">from</span><span className="ed-mute">{` `}</span><span className="ed-str">{`"@gen-app/extension-sdk/runtime"`}</span><span className="ed-mute">{`;`}</span></> },
+  { n: 7,  el: <span className="ed-mute">{` `}</span> },
+  { n: 8,  el: <><span className="ed-kw">await</span><span className="ed-mute">{` `}</span><span className="ed-fn">startExtension</span><span className="ed-bracket">{`(`}</span><span className="ed-kw">async</span><span className="ed-mute">{` (ctx) => {`}</span></> },
+  { n: 9,  el: <><span className="ed-mute">{`  Deno.`}</span><span className="ed-fn">serve</span><span className="ed-bracket">{`(`}</span></> },
+  { n: 10, el: <><span className="ed-mute">{`    { port: ctx.port, hostname: `}</span><span className="ed-str">{`"127.0.0.1"`}</span><span className="ed-mute">{`, signal: ctx.signal },`}</span></> },
+  { n: 11, el: <><span className="ed-kw">async</span><span className="ed-mute">{` (req) => {`}</span></> },
+  { n: 12, el: <><span className="ed-mute">{`      `}</span><span className="ed-kw">const</span><span className="ed-mute">{` url = `}</span><span className="ed-kw">new</span><span className="ed-mute">{` `}</span><span className="ed-fn">URL</span><span className="ed-mute">{`(req.url);`}</span></> },
+  { n: 13, el: <><span className="ed-mute">{`      `}</span><span className="ed-kw">if</span><span className="ed-mute">{` (req.method === `}</span><span className="ed-str">{`"POST"`}</span><span className="ed-mute">{` && url.pathname === `}</span><span className="ed-str">{`"/getForecast"`}</span><span className="ed-mute">{`) {`}</span></> },
+  { n: 14, el: <><span className="ed-mute">{`        `}</span><span className="ed-mute">{`return getForecast(req);`}</span></> },
+  { n: 15, el: <span className="ed-mute">{`      }`}</span> },
+  // Fresh streaming additions
+  { n: 16, el: <><span className="ed-mute">{`      `}</span><span className="ed-kw">if</span><span className="ed-mute">{` (req.method === `}</span><span className="ed-str">{`"POST"`}</span><span className="ed-mute">{` && url.pathname === `}</span><span className="ed-str">{`"/getHourly"`}</span><span className="ed-mute">{`) {`}</span></>, fresh: true },
+  { n: 17, el: <><span className="ed-mute">{`        `}</span><span className="ed-kw">const</span><span className="ed-mute">{` { city, hours = `}</span><span className="ed-num">12</span><span className="ed-mute">{` } = `}</span><span className="ed-kw">await</span><span className="ed-mute">{` req.json();`}</span></>, fresh: true },
+  { n: 18, el: <><span className="ed-mute">{`        `}</span><span className="ed-kw">const</span><span className="ed-mute">{` place = `}</span><span className="ed-kw">await</span><span className="ed-mute">{` `}</span><span className="ed-fn">geocode</span><span className="ed-mute">{`(city);`}</span></>, fresh: true },
+  { n: 19, el: <><span className="ed-mute">{`        `}</span><span className="ed-kw">const</span><span className="ed-mute">{` hourly = `}</span><span className="ed-kw">await</span><span className="ed-mute">{` `}</span><span className="ed-fn">fetchHourly</span><span className="ed-mute">{`(place, hours);`}</span></>, fresh: true },
+  { n: 20, el: <><span className="ed-mute">{`        `}</span><span className="ed-kw">return</span><span className="ed-mute">{` Response.`}</span><span className="ed-fn">json</span><span className="ed-bracket">(</span><span className="ed-mute">hourly</span><span className="ed-bracket">)</span><span className="ed-mute">;</span><span className="caret"></span></>, fresh: true, caret: true },
+];
+
+/* ─── The artboard: editor + AI panel ─── */
+function EditorWithAI() {
+  return (
+    <div className="w-full h-full p-3" style={{ background: "var(--bg-base)" }}>
+      <div className="w-full h-full flex flex-col rounded-[12px]" style={{ background: "var(--bg-window)", border: "1px solid var(--stroke-soft)", overflow: "hidden", boxShadow: "var(--elev-3)" }}>
+
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 py-2" style={{ borderBottom: "1px solid var(--stroke-hairline)", background: "var(--bg-card)" }}>
+          <I n="folder" c="w-3.5 h-3.5 text-accent" />
+          <div className="text-[12px] font-mono">
+            <span className="text-fg3">extensions / </span>
+            <span className="text-fg1">open-meteo</span>
+            <span className="text-fg3"> /</span>
+          </div>
+          <span className="rt-chip rt-deno">deno</span>
+          <span className="flex-1"></span>
+          {/* Ask AI is in pressed state */}
+          <button className="text-[11px] font-semibold px-2.5 py-1 rounded inline-flex items-center gap-1.5 border-none cursor-pointer" style={{ background: "var(--color-accent-tint)", color: "var(--color-accent)" }}>
+            <I n="sparkles" c="w-3 h-3 text-accent" />Ask AI
+          </button>
+          <button className="text-[11px] font-medium text-fg2 px-2.5 py-1 rounded inline-flex items-center gap-1.5 border-none bg-transparent cursor-pointer">
+            <I n="play" c="w-3 h-3" />Test
+          </button>
+          <button className="text-[11px] font-semibold text-white px-3 py-1 rounded inline-flex items-center gap-1.5 border-none cursor-pointer" style={{ background: "var(--color-accent)" }}>
+            <I n="check" c="w-3 h-3" />Save
+          </button>
+          <button className="text-fg3 ml-1 cursor-pointer bg-transparent border-none"><I n="x" c="w-3.5 h-3.5" /></button>
+        </div>
+
+        <div className="flex flex-1 min-h-0">
+
+          {/* Tree rail */}
+          <div className="shrink-0 flex flex-col" style={{ width: 200, background: "var(--bg-card)", borderRight: "1px solid var(--stroke-hairline)" }}>
+            <div className="flex items-center gap-1 px-2.5 py-1.5" style={{ borderBottom: "1px solid var(--stroke-hairline)" }}>
+              <span className="text-[10px] uppercase tracking-[0.06em] font-semibold text-fg3 flex-1">Files</span>
+              <button className="w-5 h-5 rounded inline-flex items-center justify-center text-fg3 bg-transparent border-none cursor-pointer"><I n="file-plus" c="w-3 h-3" /></button>
+              <button className="w-5 h-5 rounded inline-flex items-center justify-center text-fg3 bg-transparent border-none cursor-pointer"><I n="folder-plus" c="w-3 h-3" /></button>
+            </div>
+            <div className="flex flex-col py-1">
+              {[
+                ["file-text", "var(--color-accent)", "manifest.json", false, false, "mod"],
+                ["file-code", "var(--color-cyan)",   "index.ts",      true,  true,  "active"],
+                ["file-text", "var(--color-green)",  "deno.json",     false, false, null],
+              ].map(([icon, color, n, active, dirty]) => (
+                <button key={n} className="flex items-center gap-1.5 px-2.5 cursor-pointer bg-transparent border-none text-left" style={{
+                  height: 26,
+                  background: active ? "var(--bg-card-elevated)" : "transparent",
+                  borderLeft: `2px solid ${active ? "var(--color-accent)" : "transparent"}`,
+                  paddingLeft: active ? 8 : 10,
+                }}>
+                  <I n={icon} c="w-3 h-3" style={{ color }} />
+                  <span className="text-[11.5px] font-mono flex-1" style={{ color: active ? "var(--fg1)" : "var(--fg2)" }}>{n}</span>
+                  {dirty && <span style={{ width: 5, height: 5, borderRadius: 999, background: "var(--color-orange)" }}></span>}
+                  {active && <span className="pdot running" style={{ width: 5, height: 5 }}></span>}
+                </button>
+              ))}
+            </div>
+            <div className="mt-auto px-2.5 py-2 text-[10px] text-fg3" style={{ borderTop: "1px solid var(--stroke-hairline)" }}>
+              deno cache warms on save
+            </div>
+          </div>
+
+          {/* Editor pane */}
+          <div className="flex-1 min-w-0 flex flex-col">
+            {/* Tab strip */}
+            <div className="flex items-center gap-0 h-7" style={{ background: "var(--bg-card-elevated)", borderBottom: "1px solid var(--stroke-hairline)" }}>
+              <div className="flex items-center gap-1.5 h-full px-3 cursor-pointer text-[11px] font-mono" style={{
+                background: "var(--bg-window)", color: "var(--fg1)",
+                borderRight: "1px solid var(--stroke-hairline)",
+                borderBottom: "2px solid var(--color-accent)",
+                marginBottom: -1,
+              }}>
+                <I n="file-code" c="w-3 h-3 text-cyan" />
+                index.ts
+                <span style={{ width: 5, height: 5, borderRadius: 999, background: "var(--color-orange)" }}></span>
+                <I n="x" c="w-2.5 h-2.5 text-fg4 ml-1.5" />
+              </div>
+              <div className="flex items-center gap-1.5 h-full px-3 cursor-pointer text-[11px] font-mono text-fg3" style={{ borderRight: "1px solid var(--stroke-hairline)" }}>
+                <I n="file-text" c="w-3 h-3 text-accent" />
+                manifest.json
+                <I n="x" c="w-2.5 h-2.5 text-fg4 ml-1.5" />
+              </div>
+              <span className="flex-1"></span>
+              <div className="text-[10px] font-mono text-fg3 px-3 inline-flex items-center gap-1.5">
+                <span className="pdot running"></span>agent writing
+              </div>
+            </div>
+
+            {/* Code body */}
+            <div className="flex-1 min-h-0 py-2 overflow-hidden" style={{ background: "var(--bg-window)" }}>
+              {EDITOR_LINES.map(l => (
+                <div key={l.n} className={`editor-line ${l.fresh ? "ed-new" : ""}`}>
+                  <span className="ln">{l.n}</span>
+                  <span>{l.el}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Status bar */}
+            <div className="flex items-center gap-3 px-3 h-6 text-[10.5px] font-mono" style={{ background: "var(--color-accent)", color: "white" }}>
+              <span className="inline-flex items-center gap-1.5"><I n="git-branch" c="w-2.5 h-2.5" />draft</span>
+              <span style={{ opacity: 0.7 }}>·</span>
+              <span>3 files</span>
+              <span style={{ opacity: 0.7 }}>·</span>
+              <span>1 modified</span>
+              <span className="flex-1"></span>
+              <span>Ln 20, Col 35</span>
+              <span style={{ opacity: 0.7 }}>·</span>
+              <span>TS</span>
+              <span style={{ opacity: 0.7 }}>·</span>
+              <span>LF</span>
+            </div>
+          </div>
+
+          {/* AI panel */}
+          <div className="shrink-0 flex flex-col" style={{ width: 380, background: "var(--bg-card)", borderLeft: "1px solid var(--stroke-soft)" }}>
+
+            {/* AI panel header */}
+            <div className="flex items-center gap-2 px-3 py-2" style={{ borderBottom: "1px solid var(--stroke-hairline)" }}>
+              <I n="sparkles" c="w-3.5 h-3.5 text-accent" />
+              <div className="text-[12px] font-semibold text-fg1">Ask AI</div>
+              <span className="text-fg4">·</span>
+              <div className="text-[10.5px] font-mono text-fg3">in this folder</div>
+              <span className="flex-1"></span>
+              <button className="text-[10px] font-mono text-fg3 px-2 py-0.5 rounded inline-flex items-center gap-1 bg-card-elevated border-none cursor-pointer" style={{ border: "1px solid var(--stroke-soft)" }}>
+                claude-sonnet-4 <I n="chevron-down" c="w-2.5 h-2.5" />
+              </button>
+              <button className="text-fg3 p-1 bg-transparent border-none cursor-pointer" title="Collapse"><I n="panel-right-close" c="w-3.5 h-3.5" /></button>
+            </div>
+
+            {/* Scope strip — surfaces what the agent sees */}
+            <div className="px-3 py-2 flex items-center gap-1.5 flex-wrap" style={{ background: "var(--bg-card-elevated)", borderBottom: "1px solid var(--stroke-hairline)" }}>
+              <span className="text-[10px] font-mono text-fg3">scope:</span>
+              <FileChip name="manifest.json" color="var(--color-accent)" />
+              <FileChip name="index.ts" dot color="var(--color-cyan)" />
+              <FileChip name="deno.json" color="var(--color-green)" />
+              <button className="text-[10px] font-mono text-fg3 px-1.5 py-0.5 rounded bg-transparent border-none cursor-pointer">+ context</button>
+            </div>
+
+            {/* Chat thread */}
+            <div className="flex-1 min-h-0 px-3 py-3 flex flex-col gap-4 overflow-hidden" style={{ background: "var(--bg-window)" }}>
+
+              <ChatBubble who="user" author="you">
+                add a <code className="font-mono text-[11px] px-1 rounded" style={{ background: "var(--bg-card-elevated)" }}>getHourly</code> provider that takes <code className="font-mono text-[11px] px-1 rounded" style={{ background: "var(--bg-card-elevated)" }}>{`{ city, hours }`}</code> and returns a list of temperatures
+              </ChatBubble>
+
+              <ChatBubble who="agent" author="agent">
+                Adding a route + provider entry in the manifest. Geocoding stays in <code className="font-mono">geocode()</code>, I'll factor out the open-meteo call too.
+              </ChatBubble>
+
+              {/* Tool call line */}
+              <div className="flex items-center gap-2 text-[10.5px] font-mono text-fg3">
+                <I n="wrench" c="w-3 h-3" />
+                propose_change · <span className="text-fg1">index.ts</span> · +5 lines
+                <span className="flex-1"></span>
+                <span className="pdot running"></span>
+                <span className="text-green">writing</span>
+              </div>
+
+              {/* Diff card preview of the proposed change */}
+              <div className="rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--stroke-soft)" }}>
+                <div className="flex items-center gap-2 px-2.5 py-1.5" style={{ background: "var(--bg-card-elevated)" }}>
+                  <I n="file-code" c="w-3 h-3 text-cyan" />
+                  <span className="text-[10.5px] font-mono text-fg1 flex-1">src/index.ts</span>
+                  <span className="text-[9.5px] font-mono text-green">+5</span>
+                </div>
+                <div className="diff" style={{ borderRadius: 0, border: "none" }}>
+                  <div className="row"><span className="gut">15</span><span className="ed-mute">{`      }`}</span></div>
+                  <div className="row add"><span className="gut add">+</span><span>{`      if (url.pathname === "/getHourly") {`}</span></div>
+                  <div className="row add"><span className="gut add">+</span><span>{`        const { city, hours = 12 } = await req.json();`}</span></div>
+                  <div className="row add"><span className="gut add">+</span><span>{`        const place = await geocode(city);`}</span></div>
+                  <div className="row add"><span className="gut add">+</span><span>{`        const hourly = await fetchHourly(place, hours);`}</span></div>
+                  <div className="row add"><span className="gut add">+</span><span>{`        return Response.json(hourly);`}</span></div>
+                </div>
+                <div className="flex items-center gap-1.5 px-2 py-1.5" style={{ borderTop: "1px solid var(--stroke-hairline)", background: "var(--bg-card)" }}>
+                  <button className="text-[10px] font-semibold py-1 px-2 rounded text-fg2 bg-transparent border cursor-pointer" style={{ borderColor: "var(--stroke-soft)" }}>
+                    <I n="eye" c="w-2.5 h-2.5" /> Preview in editor
+                  </button>
+                  <span className="flex-1"></span>
+                  <button className="text-[10px] font-semibold py-1 px-2 rounded text-fg3 bg-transparent border-none cursor-pointer">Reject</button>
+                  <button className="text-[10px] font-semibold py-1 px-2 rounded text-white border-none cursor-pointer" style={{ background: "var(--color-accent)" }}>Apply</button>
+                </div>
+              </div>
+
+              <ChatBubble who="agent" author="agent">
+                Also adding the provider entry to <code className="font-mono">manifest.json</code> + a tiny <code className="font-mono">fetchHourly</code> helper.
+                <div className="mt-1.5 text-[10.5px] text-fg3">
+                  Next: <span className="text-fg2">manifest.json</span> · then <span className="text-fg2">lib/open-meteo.ts</span>
+                </div>
+              </ChatBubble>
+
+              {/* Will-install chip */}
+              <div className="text-[10.5px] flex items-center gap-2">
+                <I n="package-plus" c="w-3 h-3 text-orange" />
+                <span className="text-fg2">Will install</span>
+                <span className="font-mono px-1.5 py-0.5 rounded" style={{ background: "var(--bg-card-elevated)", color: "var(--fg1)" }}>
+                  jsr:@std/datetime@0.225
+                </span>
+              </div>
+            </div>
+
+            {/* Slash command hints + composer */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 flex-wrap" style={{ borderTop: "1px solid var(--stroke-hairline)" }}>
+              <span className="slash">/explain</span>
+              <span className="slash">/refactor</span>
+              <span className="slash">/test</span>
+              <span className="slash">/add-provider</span>
+              <span className="slash">/preview</span>
+            </div>
+
+            <div className="px-3 py-2.5 flex items-center gap-2" style={{ borderTop: "1px solid var(--stroke-hairline)", background: "var(--bg-card)" }}>
+              <I n="at-sign" c="w-3.5 h-3.5 text-fg3" />
+              <input placeholder="Ask, paste, or hit / for commands…" className="flex-1 bg-transparent text-[11.5px] text-fg1 outline-none" style={{ border: "none" }} />
+              <button className="text-[10.5px] font-semibold py-1 px-2 rounded text-fg2 bg-transparent border cursor-pointer inline-flex items-center gap-1" style={{ borderColor: "var(--stroke-soft)" }}>
+                <I n="square" c="w-2.5 h-2.5 text-orange" /> Stop
+              </button>
+              <button className="rounded-full w-6 h-6 inline-flex items-center justify-center text-white border-none cursor-pointer" style={{ background: "var(--color-accent)" }}>
+                <I n="arrow-up" c="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Collapsed variant: AI panel becomes a slim rail ─── */
+function CollapsedRail() {
+  return (
+    <div className="w-full h-full p-3" style={{ background: "var(--bg-base)" }}>
+      <div className="w-full h-full flex flex-col rounded-[12px]" style={{ background: "var(--bg-window)", border: "1px solid var(--stroke-soft)", overflow: "hidden", boxShadow: "var(--elev-3)" }}>
+        <div className="flex items-center gap-3 px-4 py-2" style={{ borderBottom: "1px solid var(--stroke-hairline)", background: "var(--bg-card)" }}>
+          <I n="folder" c="w-3.5 h-3.5 text-accent" />
+          <div className="text-[12px] font-mono">
+            <span className="text-fg3">extensions / </span>
+            <span className="text-fg1">open-meteo</span>
+            <span className="text-fg3"> /</span>
+          </div>
+          <span className="rt-chip rt-deno">deno</span>
+          <span className="flex-1"></span>
+          <button className="text-[11px] font-medium text-fg2 px-2.5 py-1 rounded inline-flex items-center gap-1.5 border-none bg-transparent cursor-pointer">
+            <I n="sparkles" c="w-3 h-3" />Ask AI
+          </button>
+          <button className="text-[11px] font-medium text-fg2 px-2.5 py-1 rounded inline-flex items-center gap-1.5 border-none bg-transparent cursor-pointer">
+            <I n="play" c="w-3 h-3" />Test
+          </button>
+          <button className="text-[11px] font-semibold text-white px-3 py-1 rounded inline-flex items-center gap-1.5 border-none cursor-pointer" style={{ background: "var(--color-accent)" }}>
+            <I n="check" c="w-3 h-3" />Save
+          </button>
+        </div>
+
+        <div className="flex flex-1 min-h-0">
+          <div className="shrink-0 flex flex-col" style={{ width: 200, background: "var(--bg-card)", borderRight: "1px solid var(--stroke-hairline)" }}>
+            <div className="flex items-center gap-1 px-2.5 py-1.5" style={{ borderBottom: "1px solid var(--stroke-hairline)" }}>
+              <span className="text-[10px] uppercase tracking-[0.06em] font-semibold text-fg3 flex-1">Files</span>
+              <button className="w-5 h-5 text-fg3 bg-transparent border-none cursor-pointer"><I n="file-plus" c="w-3 h-3" /></button>
+            </div>
+            <div className="flex flex-col py-1">
+              {[["manifest.json","var(--color-accent)","file-text",false],
+                ["index.ts","var(--color-cyan)","file-code",true],
+                ["deno.json","var(--color-green)","file-text",false]].map(([n,c,i,a]) => (
+                <div key={n} className="flex items-center gap-1.5 px-2.5" style={{ height: 26, background: a?"var(--bg-card-elevated)":"transparent", borderLeft: `2px solid ${a?"var(--color-accent)":"transparent"}`, paddingLeft: a?8:10 }}>
+                  <I n={i} c="w-3 h-3" style={{ color: c }} />
+                  <span className="text-[11.5px] font-mono" style={{ color: a?"var(--fg1)":"var(--fg2)" }}>{n}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Editor area */}
+          <div className="flex-1 min-w-0 flex flex-col">
+            <div className="flex items-center gap-0 h-7" style={{ background: "var(--bg-card-elevated)", borderBottom: "1px solid var(--stroke-hairline)" }}>
+              <div className="flex items-center gap-1.5 h-full px-3 text-[11px] font-mono" style={{ background: "var(--bg-window)", color: "var(--fg1)", borderRight: "1px solid var(--stroke-hairline)", borderBottom: "2px solid var(--color-accent)", marginBottom: -1 }}>
+                <I n="file-code" c="w-3 h-3 text-cyan" />index.ts<I n="x" c="w-2.5 h-2.5 text-fg4 ml-1.5" />
+              </div>
+              <span className="flex-1"></span>
+              <div className="text-[10px] font-mono text-fg3 px-3">TypeScript</div>
+            </div>
+            <div className="flex-1 min-h-0 py-2 overflow-hidden" style={{ background: "var(--bg-window)" }}>
+              {EDITOR_LINES.map(l => (
+                <div key={l.n} className={`editor-line ${l.fresh ? "ed-new" : ""}`}>
+                  <span className="ln">{l.n}</span>
+                  <span>{l.el}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-3 px-3 h-6 text-[10.5px] font-mono" style={{ background: "var(--color-accent)", color: "white" }}>
+              <span>draft</span><span style={{opacity:0.7}}>·</span><span>3 files · 1 modified</span>
+              <span className="flex-1"></span>
+              <span>Ln 20, Col 35</span>
+            </div>
+          </div>
+
+          {/* Collapsed AI rail */}
+          <div className="shrink-0 flex flex-col items-center py-3 gap-3" style={{ width: 40, background: "var(--bg-card)", borderLeft: "1px solid var(--stroke-hairline)" }}>
+            <button className="w-7 h-7 rounded-[8px] inline-flex items-center justify-center cursor-pointer border-none" style={{ background: "var(--color-accent-tint)" }}>
+              <I n="sparkles" c="w-3.5 h-3.5 text-accent" />
+            </button>
+            <div className="rotate-180 text-[10px] font-mono text-fg3" style={{ writingMode: "vertical-rl" }}>Ask AI</div>
+            <span className="flex-1"></span>
+            {/* Floating notification badge */}
+            <div className="relative">
+              <button className="w-7 h-7 rounded-full inline-flex items-center justify-center cursor-pointer border-none" style={{ background: "var(--bg-card-elevated)" }}>
+                <I n="git-pull-request" c="w-3.5 h-3.5 text-orange" />
+              </button>
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full text-[8px] font-mono text-white inline-flex items-center justify-center" style={{ background: "var(--color-orange)" }}>1</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  React.useEffect(() => {
+    const tick = () => window.lucide && window.lucide.createIcons();
+    tick();
+    const t = setInterval(tick, 250);
+    setTimeout(() => clearInterval(t), 4000);
+  }, []);
+
+  return (
+    <DesignCanvas title="Folder editor + Ask AI panel" subtitle="Editor with the agent live-authoring on the right.">
+      <DCSection id="open" title="AI panel open" subtitle="Three-column split: tree · editor · AI thread. ~1280-px window.">
+        <DCArtboard id="open" label="Editor + AI panel" width={1280} height={760}>
+          <EditorWithAI />
+        </DCArtboard>
+        <DCPostIt>
+          AI panel is 380-px and sits to the right of the editor (not over the canvas). Scope strip up top spells out which files the agent can read; click a file chip to focus the editor on it; <code>+ context</code> lets you drag in extra files. Diff card mirrors what's streaming in the editor — Apply commits to all open tabs at once. Slash hints expand into a menu on /.
+        </DCPostIt>
+      </DCSection>
+
+      <DCSection id="closed" title="AI panel collapsed to a rail" subtitle="When you want the full editor; the agent still has a presence.">
+        <DCArtboard id="closed" label="Collapsed AI rail" width={1280} height={760}>
+          <CollapsedRail />
+        </DCArtboard>
+        <DCPostIt>
+          40-px rail keeps the Ask AI button reachable and surfaces a pending-diff badge (1 proposed change unread). Clicking sparkles re-opens the full panel; the orange pull-request glyph is a quick "review what's pending" shortcut.
+        </DCPostIt>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

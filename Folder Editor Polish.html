@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Folder editor — polish + library recs</title>
+<link rel="stylesheet" href="colors_and_type.css" />
+<script src="tailwind.js"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-base); color: var(--fg1); font-family: var(--font-sans); }
+  .text-fg1 { color: var(--fg1); } .text-fg2 { color: var(--fg2); } .text-fg3 { color: var(--fg3); } .text-fg4 { color: var(--fg4); }
+  .bg-card { background: var(--bg-card); } .bg-card-elevated { background: var(--bg-card-elevated); } .bg-window { background: var(--bg-window); } .bg-base { background: var(--bg-base); }
+  .border-hairline { border-color: var(--stroke-hairline); }
+  .border-soft { border-color: var(--stroke-soft); }
+  .text-accent { color: var(--color-accent); } .bg-accent { background: var(--color-accent); }
+  .bg-accent-tint { background: var(--color-accent-tint); }
+  .text-green { color: var(--color-green); } .text-orange { color: var(--color-orange); } .text-purple { color: var(--color-purple); } .text-cyan { color: var(--color-cyan); } .text-yellow { color: var(--color-yellow); }
+  .anno { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; color: var(--fg3); }
+
+  /* Runtime chip from prior previews. */
+  .rt-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 6px; border-radius: 999px; font-family: var(--font-mono); font-size: 9.5px; font-weight: 600; letter-spacing: 0.02em; }
+  .rt-deno { background: rgba(48,209,88,0.14); color: var(--color-green); }
+  .rt-worker { background: var(--bg-card-elevated); color: var(--fg2); border: 1px solid var(--stroke-soft); }
+
+  /* Editor lines */
+  .editor-line { display: grid; grid-template-columns: 32px 1fr; gap: 8px; font-family: var(--font-mono); font-size: 11.5px; line-height: 1.6; padding: 0 8px; }
+  .editor-line .ln { text-align: right; color: var(--fg4); user-select: none; }
+  .ed-kw  { color: var(--color-purple); }
+  .ed-fn  { color: var(--color-cyan); }
+  .ed-str { color: var(--color-green); }
+  .ed-num { color: var(--color-orange); }
+  .ed-cmt { color: var(--fg3); font-style: italic; }
+  .ed-mute { color: var(--fg2); }
+  .ed-bracket { color: var(--fg2); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard, DCPostIt } = window;
+
+function I({n, c=""}) { return <i data-lucide={n} className={c}></i>; }
+function Anno({children}) { return <div className="anno">{children}</div>; }
+
+/* ─── Shared content used in every variant — same code in all three. ─── */
+const SAMPLE_LINES = [
+  { n: 1,  el: <span className="ed-cmt">{`// Deno extension entry. Reads PORT / EXTENSION_ID / DATA_DIR / SECRET_*`}</span> },
+  { n: 2,  el: <span className="ed-cmt">{`// from the env the host injects; binds Deno.serve to PORT; handles SIGTERM`}</span> },
+  { n: 3,  el: <span className="ed-cmt">{`// for graceful shutdown.`}</span> },
+  { n: 4,  el: <span className="ed-mute">{` `}</span> },
+  { n: 5,  el: <><span className="ed-kw">const</span><span className="ed-mute"> port = </span><span className="ed-fn">Number</span><span className="ed-bracket">(</span><span className="ed-mute">Deno.env.</span><span className="ed-fn">get</span><span className="ed-bracket">(</span><span className="ed-str">{`"PORT"`}</span><span className="ed-bracket">)</span><span className="ed-mute"> ?? </span><span className="ed-num">0</span><span className="ed-bracket">)</span><span className="ed-mute">;</span></> },
+  { n: 6,  el: <><span className="ed-kw">const</span><span className="ed-mute"> extId = Deno.env.</span><span className="ed-fn">get</span><span className="ed-bracket">(</span><span className="ed-str">{`"EXTENSION_ID"`}</span><span className="ed-bracket">)</span><span className="ed-mute"> ?? </span><span className="ed-str">{`"my-extension"`}</span><span className="ed-mute">;</span></> },
+  { n: 7,  el: <span className="ed-mute">{` `}</span> },
+  { n: 8,  el: <><span className="ed-kw">const</span><span className="ed-mute"> ac = </span><span className="ed-kw">new</span><span className="ed-mute"> </span><span className="ed-fn">AbortController</span><span className="ed-bracket">()</span><span className="ed-mute">;</span></> },
+  { n: 9,  el: <><span className="ed-mute">Deno.</span><span className="ed-fn">addSignalListener</span><span className="ed-bracket">(</span><span className="ed-str">{`"SIGTERM"`}</span><span className="ed-mute">, </span><span className="ed-bracket">() =&gt; {`{`}</span></> },
+  { n: 10, el: <><span className="ed-mute">{`  console.`}</span><span className="ed-fn">error</span><span className="ed-bracket">(</span><span className="ed-str">{`\`[\${extId}] SIGTERM\``}</span><span className="ed-bracket">)</span><span className="ed-mute">;</span></> },
+  { n: 11, el: <><span className="ed-mute">{`  ac.`}</span><span className="ed-fn">abort</span><span className="ed-bracket">()</span><span className="ed-mute">;</span></> },
+  { n: 12, el: <span className="ed-bracket">{`});`}</span> },
+  { n: 13, el: <span className="ed-mute">{` `}</span> },
+  { n: 14, el: <><span className="ed-mute">Deno.</span><span className="ed-fn">serve</span><span className="ed-bracket">(</span></> },
+  { n: 15, el: <span className="ed-bracket">{`  {`}</span> },
+  { n: 16, el: <><span className="ed-mute">{`    port,`}</span></> },
+  { n: 17, el: <><span className="ed-mute">{`    hostname: `}</span><span className="ed-str">{`"127.0.0.1"`}</span><span className="ed-mute">,</span></> },
+  { n: 18, el: <><span className="ed-mute">{`    signal: ac.signal,`}</span></> },
+];
+
+const FILES = [
+  { name: "deno.json",     icon: "file-text", color: "var(--color-green)",  meta: "config",    readonly: true },
+  { name: "index.ts",      icon: "file-code", color: "var(--color-cyan)",   meta: "entry",     active: true, dirty: true },
+  { name: "manifest.json", icon: "file-text", color: "var(--color-accent)", meta: "manifest",  active: false },
+];
+
+/* ─── A · Current (recreate the user's screenshot — for comparison) ─── */
+function Variant_Current() {
+  return (
+    <div className="w-full h-full p-3" style={{ background: "var(--bg-base)" }}>
+      <div className="w-full h-full flex flex-col rounded-[14px]" style={{ background: "#0f1216", border: "1px solid var(--stroke-soft)", overflow: "hidden" }}>
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-3.5" style={{ borderBottom: "1px solid var(--stroke-hairline)" }}>
+          <div className="text-[16px] font-semibold text-fg1">New deno extension</div>
+          <span className="text-[11px] text-fg3">new</span>
+          <span className="flex-1"></span>
+          <button className="text-[11px] font-semibold text-white px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 border-none cursor-pointer" style={{ background: "var(--color-accent)" }}>
+            <I n="sparkles" c="w-3 h-3" />AI
+          </button>
+          <button className="text-[11px] font-semibold text-white px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 border-none cursor-pointer" style={{ background: "var(--color-accent)" }}>
+            <I n="save" c="w-3 h-3" />Save
+          </button>
+          <I n="x" c="w-4 h-4 text-fg3 cursor-pointer" />
+        </div>
+
+        <div className="flex flex-1 min-h-0">
+          {/* File rail */}
+          <div className="shrink-0 flex flex-col gap-0 px-3 py-3" style={{ width: 220 }}>
+            <div className="text-[10px] uppercase tracking-[0.06em] font-semibold text-fg3 mb-2 px-1">FILES</div>
+            <div className="flex items-center gap-2 mb-3">
+              <button className="w-7 h-7 rounded inline-flex items-center justify-center bg-card-elevated border-none cursor-pointer"><I n="file-plus" c="w-3.5 h-3.5 text-fg2" /></button>
+              <button className="w-7 h-7 rounded inline-flex items-center justify-center bg-card-elevated border-none cursor-pointer"><I n="folder-plus" c="w-3.5 h-3.5 text-fg2" /></button>
+            </div>
+            {/* Each file given lots of vertical space — the issue */}
+            {["deno.json", "index.ts", "manifest.json"].map(name => (
+              <div key={name} className="flex flex-col items-start gap-1.5 px-1 py-3 cursor-pointer">
+                <I n="file" c="w-3.5 h-3.5 text-fg3" />
+                <div className="text-[12.5px] font-mono text-fg2">{name}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Editor */}
+          <div className="flex-1 min-w-0 flex flex-col" style={{ background: "#0a0d11" }}>
+            <div className="flex-1 min-h-0 py-2 overflow-hidden">
+              {SAMPLE_LINES.map(l => (
+                <div key={l.n} className="editor-line">
+                  <span className="ln">{l.n}</span>
+                  <span>{l.el}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── B · Tightened (the elegant one — recommended) ─── */
+function Variant_Tight() {
+  return (
+    <div className="w-full h-full p-3" style={{ background: "var(--bg-base)" }}>
+      <div className="w-full h-full flex flex-col rounded-[12px]" style={{ background: "var(--bg-window)", border: "1px solid var(--stroke-soft)", overflow: "hidden", boxShadow: "var(--elev-3)" }}>
+
+        {/* Header — slim, with folder breadcrumb */}
+        <div className="flex items-center gap-3 px-4 py-2" style={{ borderBottom: "1px solid var(--stroke-hairline)", background: "var(--bg-card)" }}>
+          <I n="folder" c="w-3.5 h-3.5 text-accent" />
+          <div className="flex items-center gap-1 text-[12px] font-mono">
+            <span className="text-fg3">extensions /</span>
+            <input defaultValue="open-meteo" className="bg-transparent border-none outline-none text-fg1" style={{ width: 110 }} />
+            <span className="text-fg3">/</span>
+          </div>
+          <span className="rt-chip rt-deno">deno</span>
+          <span className="flex-1"></span>
+          <button className="text-[11px] font-medium text-fg2 px-2.5 py-1 rounded inline-flex items-center gap-1.5 border-none bg-transparent cursor-pointer hover:text-fg1">
+            <I n="sparkles" c="w-3 h-3" />Ask AI
+          </button>
+          <button className="text-[11px] font-medium text-fg2 px-2.5 py-1 rounded inline-flex items-center gap-1.5 border-none bg-transparent cursor-pointer hover:text-fg1">
+            <I n="play" c="w-3 h-3" />Test
+          </button>
+          <button className="text-[11px] font-semibold text-white px-3 py-1 rounded inline-flex items-center gap-1.5 border-none cursor-pointer" style={{ background: "var(--color-accent)" }}>
+            <I n="check" c="w-3 h-3" />Save
+          </button>
+          <button className="text-fg3 ml-1 cursor-pointer bg-transparent border-none"><I n="x" c="w-3.5 h-3.5" /></button>
+        </div>
+
+        <div className="flex flex-1 min-h-0">
+
+          {/* File rail — tight rows, 26px tall, single-line */}
+          <div className="shrink-0 flex flex-col" style={{ width: 200, background: "var(--bg-card)", borderRight: "1px solid var(--stroke-hairline)" }}>
+            {/* Files header with inline actions on hover */}
+            <div className="flex items-center gap-1 px-2.5 py-1.5" style={{ borderBottom: "1px solid var(--stroke-hairline)" }}>
+              <span className="text-[10px] uppercase tracking-[0.06em] font-semibold text-fg3 flex-1">Files</span>
+              <button className="w-5 h-5 rounded inline-flex items-center justify-center text-fg3 bg-transparent border-none cursor-pointer hover:text-fg1" title="New file"><I n="file-plus" c="w-3 h-3" /></button>
+              <button className="w-5 h-5 rounded inline-flex items-center justify-center text-fg3 bg-transparent border-none cursor-pointer hover:text-fg1" title="New folder"><I n="folder-plus" c="w-3 h-3" /></button>
+            </div>
+            {/* Tight rows */}
+            <div className="flex flex-col py-1">
+              {FILES.map(f => (
+                <button key={f.name} className="flex items-center gap-1.5 px-2.5 cursor-pointer bg-transparent border-none text-left" style={{
+                  height: 26,
+                  background: f.active ? "var(--bg-card-elevated)" : "transparent",
+                  borderLeft: `2px solid ${f.active ? "var(--color-accent)" : "transparent"}`,
+                  paddingLeft: f.active ? 8 : 10,
+                }}>
+                  <I n={f.icon} c="w-3 h-3" style={{ color: f.color }} />
+                  <span className="text-[11.5px] font-mono flex-1" style={{ color: f.active ? "var(--fg1)" : "var(--fg2)" }}>{f.name}</span>
+                  {f.dirty && <span style={{ width: 6, height: 6, borderRadius: 999, background: "var(--color-orange)" }}></span>}
+                  {f.readonly && <I n="lock" c="w-2.5 h-2.5 text-fg4" />}
+                </button>
+              ))}
+            </div>
+            {/* Footer hint */}
+            <div className="mt-auto px-2.5 py-2 text-[10px] text-fg3 leading-[1.45]" style={{ borderTop: "1px solid var(--stroke-hairline)" }}>
+              deno cache warms on save · ⌘P to find file
+            </div>
+          </div>
+
+          {/* Editor pane */}
+          <div className="flex-1 min-w-0 flex flex-col">
+            {/* Tab strip — only shows open files; click ✕ to close */}
+            <div className="flex items-center gap-0 h-7" style={{ background: "var(--bg-card-elevated)", borderBottom: "1px solid var(--stroke-hairline)" }}>
+              <div className="flex items-center gap-1.5 h-full px-3 cursor-pointer text-[11px] font-mono" style={{
+                background: "var(--bg-window)", color: "var(--fg1)",
+                borderRight: "1px solid var(--stroke-hairline)",
+                borderBottom: "2px solid var(--color-accent)",
+                marginBottom: -1,
+              }}>
+                <I n="file-code" c="w-3 h-3 text-cyan" />
+                index.ts
+                <span style={{ width: 5, height: 5, borderRadius: 999, background: "var(--color-orange)" }}></span>
+                <I n="x" c="w-2.5 h-2.5 text-fg4 ml-1.5" />
+              </div>
+              <div className="flex items-center gap-1.5 h-full px-3 cursor-pointer text-[11px] font-mono text-fg3" style={{ borderRight: "1px solid var(--stroke-hairline)" }}>
+                <I n="file-text" c="w-3 h-3 text-accent" />
+                manifest.json
+                <I n="x" c="w-2.5 h-2.5 text-fg4 ml-1.5" />
+              </div>
+              <span className="flex-1"></span>
+              <div className="text-[10px] font-mono text-fg3 px-3">TypeScript · UTF-8</div>
+            </div>
+
+            {/* Code body */}
+            <div className="flex-1 min-h-0 py-2 overflow-hidden" style={{ background: "var(--bg-window)" }}>
+              {SAMPLE_LINES.map(l => (
+                <div key={l.n} className="editor-line">
+                  <span className="ln">{l.n}</span>
+                  <span>{l.el}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Status bar */}
+            <div className="flex items-center gap-3 px-3 h-6 text-[10.5px] font-mono" style={{ background: "var(--color-accent)", color: "white" }}>
+              <span className="inline-flex items-center gap-1.5"><I n="git-branch" c="w-2.5 h-2.5" />draft</span>
+              <span style={{ opacity: 0.7 }}>·</span>
+              <span>3 files</span>
+              <span style={{ opacity: 0.7 }}>·</span>
+              <span>1 modified</span>
+              <span className="flex-1"></span>
+              <span>Ln 14, Col 11</span>
+              <span style={{ opacity: 0.7 }}>·</span>
+              <span>TS</span>
+              <span style={{ opacity: 0.7 }}>·</span>
+              <span>LF</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── C · With nested folders + indent guides (for when the extension grows) ─── */
+function Variant_Tree() {
+  const Row = ({ depth, icon, color, label, active, dirty, isDir, open }) => (
+    <button className="flex items-center gap-1.5 cursor-pointer bg-transparent border-none text-left relative px-2.5" style={{
+      height: 24, paddingLeft: 10 + depth * 14,
+      background: active ? "var(--bg-card-elevated)" : "transparent",
+      borderLeft: `2px solid ${active ? "var(--color-accent)" : "transparent"}`,
+    }}>
+      {/* Indent guides — vertical hairlines at each depth */}
+      {Array.from({ length: depth }).map((_, i) => (
+        <span key={i} style={{
+          position: "absolute", left: 10 + i * 14 + 5, top: 0, bottom: 0, width: 1,
+          background: "var(--stroke-hairline)",
+        }}></span>
+      ))}
+      {isDir
+        ? <I n={open ? "chevron-down" : "chevron-right"} c="w-3 h-3 text-fg3" />
+        : <span style={{ width: 12 }}></span>}
+      <I n={icon} c="w-3 h-3" style={{ color }} />
+      <span className="text-[11.5px] font-mono flex-1" style={{ color: active ? "var(--fg1)" : "var(--fg2)" }}>{label}</span>
+      {dirty && <span style={{ width: 5, height: 5, borderRadius: 999, background: "var(--color-orange)" }}></span>}
+    </button>
+  );
+
+  return (
+    <div className="w-full h-full p-3" style={{ background: "var(--bg-base)" }}>
+      <div className="w-full h-full flex flex-col rounded-[12px]" style={{ background: "var(--bg-window)", border: "1px solid var(--stroke-soft)", overflow: "hidden", boxShadow: "var(--elev-3)" }}>
+        {/* Header (same as B) */}
+        <div className="flex items-center gap-3 px-4 py-2" style={{ borderBottom: "1px solid var(--stroke-hairline)", background: "var(--bg-card)" }}>
+          <I n="folder" c="w-3.5 h-3.5 text-accent" />
+          <div className="text-[12px] font-mono">
+            <span className="text-fg3">extensions / </span>
+            <span className="text-fg1">linear-mcp</span>
+            <span className="text-fg3"> /</span>
+          </div>
+          <span className="rt-chip rt-deno">deno</span>
+          <span className="flex-1"></span>
+          <span className="text-[10px] text-fg3 font-mono">12 files · 1 modified</span>
+        </div>
+
+        <div className="flex flex-1 min-h-0">
+          {/* Tree rail with indent guides */}
+          <div className="shrink-0 flex flex-col" style={{ width: 240, background: "var(--bg-card)", borderRight: "1px solid var(--stroke-hairline)" }}>
+            <div className="flex items-center gap-1 px-2.5 py-1.5" style={{ borderBottom: "1px solid var(--stroke-hairline)" }}>
+              <span className="text-[10px] uppercase tracking-[0.06em] font-semibold text-fg3 flex-1">Files</span>
+              <button className="w-5 h-5 rounded inline-flex items-center justify-center text-fg3 bg-transparent border-none cursor-pointer"><I n="file-plus" c="w-3 h-3" /></button>
+              <button className="w-5 h-5 rounded inline-flex items-center justify-center text-fg3 bg-transparent border-none cursor-pointer"><I n="folder-plus" c="w-3 h-3" /></button>
+              <button className="w-5 h-5 rounded inline-flex items-center justify-center text-fg3 bg-transparent border-none cursor-pointer"><I n="search" c="w-3 h-3" /></button>
+            </div>
+            <div className="flex flex-col py-1">
+              <Row depth={0} icon="file-text" color="var(--color-accent)" label="manifest.json" />
+              <Row depth={0} icon="file-text" color="var(--color-green)"  label="deno.json" />
+              <Row depth={0} icon="folder"    color="var(--color-yellow)" label="src" isDir open />
+              <Row depth={1} icon="file-code" color="var(--color-cyan)"   label="index.ts" active dirty />
+              <Row depth={1} icon="folder"    color="var(--color-yellow)" label="providers" isDir open />
+              <Row depth={2} icon="file-code" color="var(--color-cyan)"   label="issues.ts" />
+              <Row depth={2} icon="file-code" color="var(--color-cyan)"   label="comments.ts" />
+              <Row depth={2} icon="file-code" color="var(--color-cyan)"   label="search.ts" />
+              <Row depth={1} icon="folder"    color="var(--color-yellow)" label="lib" isDir />
+              <Row depth={0} icon="folder"    color="var(--color-yellow)" label="tests" isDir />
+              <Row depth={0} icon="file-text" color="var(--fg2)"          label="README.md" />
+            </div>
+          </div>
+
+          {/* Editor */}
+          <div className="flex-1 min-w-0 flex flex-col">
+            <div className="flex items-center gap-0 h-7" style={{ background: "var(--bg-card-elevated)", borderBottom: "1px solid var(--stroke-hairline)" }}>
+              <div className="flex items-center gap-1.5 h-full px-3 cursor-pointer text-[11px] font-mono" style={{
+                background: "var(--bg-window)", color: "var(--fg1)",
+                borderRight: "1px solid var(--stroke-hairline)",
+                borderBottom: "2px solid var(--color-accent)",
+                marginBottom: -1,
+              }}>
+                <I n="file-code" c="w-3 h-3 text-cyan" />
+                src/index.ts
+                <span style={{ width: 5, height: 5, borderRadius: 999, background: "var(--color-orange)" }}></span>
+                <I n="x" c="w-2.5 h-2.5 text-fg4 ml-1.5" />
+              </div>
+              <span className="flex-1"></span>
+              <div className="text-[10px] font-mono text-fg3 px-3">TypeScript</div>
+            </div>
+            <div className="flex-1 min-h-0 py-2 overflow-hidden" style={{ background: "var(--bg-window)" }}>
+              {SAMPLE_LINES.map(l => (
+                <div key={l.n} className="editor-line">
+                  <span className="ln">{l.n}</span>
+                  <span>{l.el}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-3 px-3 h-6 text-[10.5px] font-mono" style={{ background: "var(--color-accent)", color: "white" }}>
+              <span>main</span>
+              <span style={{ opacity: 0.7 }}>·</span>
+              <span>12 files</span>
+              <span className="flex-1"></span>
+              <span>Ln 14, Col 11</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Library recommendation card ─── */
+function Recs() {
+  const Lib = ({ name, pkg, stars, downloads, notes, recommended }) => (
+    <div className="rounded-[10px] p-3" style={{
+      background: "var(--bg-card)",
+      border: `1px solid ${recommended ? "var(--color-accent)" : "var(--stroke-soft)"}`,
+    }}>
+      <div className="flex items-center gap-2 mb-1">
+        <div className="text-[13px] font-semibold text-fg1">{name}</div>
+        {recommended && <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded" style={{ background: "var(--color-accent-tint)", color: "var(--color-accent)" }}>recommended</span>}
+        <span className="flex-1"></span>
+        <span className="text-[10px] font-mono text-fg3">★ {stars}</span>
+        <span className="text-[10px] font-mono text-fg3">{downloads}/wk</span>
+      </div>
+      <div className="text-[10.5px] font-mono text-fg3 mb-1.5">{pkg}</div>
+      <div className="text-[11px] text-fg2 leading-[1.5]">{notes}</div>
+    </div>
+  );
+
+  return (
+    <div className="w-full h-full p-5 flex flex-col gap-3" style={{ background: "var(--bg-window)" }}>
+      <div>
+        <div className="text-[13px] font-semibold text-fg1">For the tree itself</div>
+        <div className="text-[11.5px] text-fg2 mt-0.5 leading-[1.5]">Headless React tree components. All let you keep gen-app's design tokens — they only handle interaction (expand/collapse, drag-drop, keyboard nav, virtualization).</div>
+      </div>
+      <Lib
+        name="react-arborist"
+        pkg="npm:react-arborist · MIT"
+        stars="3k+"
+        downloads="~12k"
+        recommended
+        notes="VS Code-style tree. Virtualized (handles thousands of files), drag-drop, inline rename, keyboard nav, full custom render. Built by jameskerr for a Zed/Brim sidebar — exactly the shape you want. Tree-line prefix helper for indentation guides included."
+      />
+      <Lib
+        name="react-complex-tree"
+        pkg="npm:react-complex-tree · MIT"
+        stars="1.3k"
+        downloads="~50k"
+        notes="More opinionated than arborist; full WAI-ARIA out of the box, multi-tree state, type-to-search. Worth it if accessibility audits are on your radar. Larger than arborist; you'll override more of its default markup."
+      />
+      <Lib
+        name="headless-tree"
+        pkg="npm:@headless-tree/react · MIT"
+        stars="700+"
+        downloads="~6k"
+        notes="Newest of the three (from the same author as react-complex-tree). Truly headless — no DOM at all. Best if you've already committed to a design system and just want the state machine."
+      />
+
+      <div className="mt-2">
+        <div className="text-[13px] font-semibold text-fg1">For the editor</div>
+        <div className="text-[11.5px] text-fg2 mt-0.5 leading-[1.5]">You already have CodeMirror 5; both options below are heavier but render better at this fidelity.</div>
+      </div>
+      <Lib
+        name="@uiw/react-codemirror"
+        pkg="npm:@uiw/react-codemirror · MIT"
+        stars="2k+"
+        downloads="~250k"
+        recommended
+        notes="Drop-in CodeMirror 6 wrapper. Same engine as Replit + Jupyter; sharper typography, better syntax highlight, themeable via CSS vars. Tree-shakes well — ~80kb for JS+TS support."
+      />
+      <Lib
+        name="@monaco-editor/react"
+        pkg="npm:@monaco-editor/react · MIT"
+        stars="4k+"
+        downloads="~700k"
+        notes="The VS Code editor, in your app. Heaviest option (~2MB), but if you want IntelliSense over the SDK types, Monaco is the only way. Worth it for first-class TS support on the deno path."
+      />
+    </div>
+  );
+}
+
+/* ─── Root ─── */
+function App() {
+  React.useEffect(() => {
+    const tick = () => window.lucide && window.lucide.createIcons();
+    tick();
+    const t = setInterval(tick, 250);
+    setTimeout(() => clearInterval(t), 4000);
+  }, []);
+
+  return (
+    <DesignCanvas title="Folder editor — elegant variants + library recs" subtitle="Three layouts and the libraries to reach for.">
+      <DCSection id="current" title="A · Today (your screenshot)" subtitle="Recreated for comparison. The density and spacing problems are highlighted.">
+        <DCArtboard id="current" label="Current build" width={1100} height={700}>
+          <Variant_Current />
+        </DCArtboard>
+        <DCPostIt>
+          Each file row is ~80px tall — that's 3× what VS Code, Cursor, StackBlitz, and Replit use. The two action icons sit detached above the list. The editor area has no chrome connecting it to the rail.
+        </DCPostIt>
+      </DCSection>
+
+      <DCSection id="tight" title="B · Tight (recommended)" subtitle="VS Code density. Slim header with folder breadcrumb · 26-px file rows · file tabs above the editor · accent status bar.">
+        <DCArtboard id="tight" label="Tight folder editor" width={1100} height={700}>
+          <Variant_Tight />
+        </DCArtboard>
+        <DCPostIt>
+          Same content, 1/3 the visual weight. Inline file-plus / folder-plus icons live next to "Files" instead of standalone tiles. Active file gets a 2-px accent left border + elevated background; modified file shows an orange dot; read-only file shows a tiny lock. Status bar replaces a separate footer area.
+        </DCPostIt>
+      </DCSection>
+
+      <DCSection id="tree" title="C · Nested tree (for when an extension grows)" subtitle="Same chrome as B but the rail expands into a proper tree with indent guides.">
+        <DCArtboard id="tree" label="Tree with indent guides" width={1100} height={700}>
+          <Variant_Tree />
+        </DCArtboard>
+        <DCPostIt>
+          12-file Linear MCP extension — `src/providers/issues.ts` is being edited at depth 2. Hairline indent guides at each depth, chevrons on directories, file icons stay colored by extension. This is what react-arborist gives you for free.
+        </DCPostIt>
+      </DCSection>
+
+      <DCSection id="recs" title="Libraries to pull in" subtitle="All headless — keep gen-app design tokens; let the library do interaction + virtualization.">
+        <DCArtboard id="recs" label="Recommended libraries" width={620} height={840}>
+          <Recs />
+        </DCArtboard>
+        <DCPostIt>
+          Pair: <code>react-arborist</code> for the tree + <code>@uiw/react-codemirror</code> for the editor. Combined ~150kb gzipped, both MIT. Drop both into <code>ExtensionFolderEditor.tsx</code> — the styling is already gen-app's; you just pass the design tokens through their <code>style</code>/<code>theme</code> props.
+        </DCPostIt>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
