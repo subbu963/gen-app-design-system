@@ -94,6 +94,12 @@ function useCanvases(seedFirstWith = []) {
     messages: [...c.messages, { role: "system", content: "Widget tossed." }],
   }));
 
+  // Direct message / widget pushes — used by the live-authoring flow, which
+  // drives chat + canvas outside the normal routePrompt path.
+  const pushUser  = (text) => updateActive(c => ({ ...c, messages: [...c.messages, { role: "user", content: text }] }));
+  const pushAgent = (text) => updateActive(c => ({ ...c, messages: [...c.messages, { role: "ai", content: text }] }));
+  const addWidget = (w) => updateActive(c => ({ ...c, widgets: [...c.widgets, { ...w, id: w.id || ("w-" + Date.now()), isNew: true }] }));
+
   const retagWidget = (id) => {
     const w = active.widgets.find(x => x.id === id);
     const next = window.prompt("New @symbol for this widget", w?.symbol || "");
@@ -177,6 +183,7 @@ function useCanvases(seedFirstWith = []) {
     widgets: active.widgets, selected: active.selected, messages: active.messages,
     sessions: active.sessions,
     select, send, clearSelected, removeWidget, addressInChat, retagWidget,
+    pushUser, pushAgent, addWidget,
     // canvas-level
     newCanvas, renameCanvas, deleteCanvas, clearChat, newSession, restoreSession, deleteSession, resetAll,
   };
@@ -305,7 +312,7 @@ function IOSCanvasMenu({ canvases, activeId, onSwitch, onCreate, onRename, onDel
 }
 
 /* ---------- Desktop side ---------- */
-function DesktopApp({ chat, onOpenSettings }) {
+function DesktopApp({ chat, lane, onOpenSettings, onSend, authoring }) {
   const [dockOpen, setDockOpen] = React.useState(true);
   return (
     <DesktopFrame
@@ -326,18 +333,25 @@ function DesktopApp({ chat, onOpenSettings }) {
         </>
       }
     >
-      <CanvasTabs
+      <LaneTabs
         canvases={chat.canvases}
+        apps={lane.apps}
         activeId={chat.activeId}
-        onSwitch={chat.setActiveId}
-        onCreate={() => chat.newCanvas()}
-        onRename={chat.renameCanvas}
-        onDelete={chat.deleteCanvas}
+        activeAppId={lane.activeAppId}
+        onSwitchCanvas={(id) => { lane.closeApp(); chat.setActiveId(id); }}
+        onNewCanvas={() => { lane.closeApp(); chat.newCanvas(); }}
+        onRenameCanvas={chat.renameCanvas}
+        onDeleteCanvas={chat.deleteCanvas}
+        onOpenApp={(id) => lane.openApp(id)}
+        onCloseApp={lane.closeApp}
+        onNewApp={() => lane.newApp()}
       />
-      <Canvas widgets={chat.widgets} selected={chat.selected} onSelect={chat.select} onDelete={chat.removeWidget} onAddressInChat={chat.addressInChat} onRetag={chat.retagWidget} />
+      {lane.activeApp
+        ? <AppView app={lane.activeApp} launchedOver={lane.launchedOver} onBackToGrid={lane.closeApp} onKeepAsTab={lane.keepAsTab} />
+        : <Canvas widgets={chat.widgets} selected={chat.selected} onSelect={chat.select} onDelete={chat.removeWidget} onAddressInChat={chat.addressInChat} onRetag={chat.retagWidget} />}
       <ChatDock
         messages={chat.messages}
-        onSend={chat.send}
+        onSend={onSend}
         expanded={dockOpen}
         onToggle={() => setDockOpen(o => !o)}
         addressed={chat.selected}
@@ -348,8 +362,9 @@ function DesktopApp({ chat, onOpenSettings }) {
         sessions={chat.sessions}
         onRestoreSession={chat.restoreSession}
         onDeleteSession={chat.deleteSession}
-        contextLabel={chat.active.name}
+        contextLabel={lane.activeApp ? lane.activeApp.name : chat.active.name}
       />
+      <LiveAuthoringOverlay authoring={authoring} />
     </DesktopFrame>
   );
 }
@@ -411,6 +426,24 @@ function App() {
   const [tw, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const seedWidgets = tw.seedCanvas ? [SEED_WEATHER, SEED_STOCK, SEED_CALENDAR] : [];
   const chat = useCanvases(seedWidgets);
+  const authoring = useAuthoring();
+  const lane = useAppLane();
+
+  // Desktop send: if the prompt needs an extension, run the live-authoring
+  // flow (chat lines + floating editor); otherwise the normal chat path.
+  const handleSend = (text, addressed = []) => {
+    const ext = (!addressed.length && window.matchExtension) ? window.matchExtension(text) : null;
+    if (ext) {
+      chat.pushUser(text);
+      chat.pushAgent(`Drafting an extension — ${ext.folder}. I'll wire it into a widget when it compiles.`);
+      authoring.start(ext, () => {
+        chat.addWidget(ext.widget);
+        chat.pushAgent(`Installed ${ext.id} v0.1.0 · added @${ext.widget.symbol} to the canvas.`);
+      });
+      return;
+    }
+    chat.send(text, addressed);
+  };
 
   const [showOnboarding, setShowOnboarding] = React.useState(tw.showOnboarding);
   React.useEffect(() => { setShowOnboarding(tw.showOnboarding); }, [tw.showOnboarding]);
@@ -424,7 +457,7 @@ function App() {
   return (
     <>
       <div className="stage">
-        <DesktopApp chat={chat} onOpenSettings={() => setSettingsOpen("desktop")} />
+        <DesktopApp chat={chat} lane={lane} onSend={handleSend} authoring={authoring} onOpenSettings={() => setSettingsOpen("desktop")} />
         <IOSAppWithSettings
           chat={chat}
           settingsOpen={settingsOpen === "ios"}
@@ -472,8 +505,15 @@ function App() {
         </TweakSection>
         <TweakSection label="Try it">
           <TweakButton onClick={() => chat.newCanvas("Trading")} label="New canvas (Trading)" />
+          <TweakButton onClick={() => handleSend("add a hacker news widget", [])} label="Author HN extension (live)" />
           <TweakButton onClick={() => chat.send("@market what's the trend?", [])} label="Send @market mention" />
           <TweakButton onClick={() => chat.send("Add a weather widget for Tokyo", [])} label="Create another widget" />
+        </TweakSection>
+        <TweakSection label="App widgets">
+          <TweakButton onClick={() => lane.openApp("app-workouts")} label="Open Workouts app" />
+          <TweakButton onClick={() => lane.openApp("app-projects", { ephemeral: true })} label="Launch Projects over canvas" />
+          <TweakButton onClick={() => lane.newApp()} label="New app" />
+          <TweakButton onClick={lane.closeApp} label="Back to grid" />
         </TweakSection>
       </TweaksPanel>
     </>

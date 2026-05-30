@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>gen-app DS · App widgets (ADR 0006)</title>
+<link rel="stylesheet" href="colors_and_type.css" />
+<script src="tailwind.js"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-base); color: var(--fg1); font-family: var(--font-sans); }
+
+  /* tailwind-token bridges used across artboards */
+  .text-fg1 { color: var(--fg1); } .text-fg2 { color: var(--fg2); } .text-fg3 { color: var(--fg3); } .text-fg4 { color: var(--fg4); }
+  .bg-card { background: var(--bg-card); } .bg-card-elevated { background: var(--bg-card-elevated); } .bg-window { background: var(--bg-window); } .bg-base { background: var(--bg-base); }
+  .text-accent { color: var(--color-accent); } .bg-accent { background: var(--color-accent); } .bg-accent-tint { background: var(--color-accent-tint); }
+  .text-green { color: var(--color-green); } .text-orange { color: var(--color-orange); } .text-red { color: var(--color-red); } .text-yellow { color: var(--color-yellow); } .text-purple { color: var(--color-purple); } .text-cyan { color: var(--color-cyan); } .text-indigo { color: var(--color-indigo); }
+
+  .anno { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; color: var(--fg3); }
+
+  /* @symbol handle */
+  .sym { font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; color: var(--color-accent); }
+
+  /* authorship + runtime chips, process dot */
+  .kind-chip, .rt-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 6px; border-radius: 999px; font-family: var(--font-mono); font-size: 9.5px; font-weight: 600; letter-spacing: 0.02em; }
+  .kind-bundled { background: var(--bg-card-elevated); color: var(--fg2); border: 1px solid var(--stroke-soft); }
+  .kind-user    { background: var(--tint-purple); color: var(--color-purple); }
+  .kind-app     { background: var(--color-accent-tint); color: var(--color-accent); }
+  .rt-worker { background: var(--bg-card-elevated); color: var(--fg2); border: 1px solid var(--stroke-soft); }
+  .rt-deno   { background: rgba(48,209,88,0.14); color: var(--color-green); }
+
+  .pdot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .pdot.running { background: var(--color-green); animation: pulse 2s ease-out infinite; }
+  .pdot.idle    { background: var(--fg3); }
+  .pdot.stopped { background: var(--fg4); }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(48,209,88,0.55); } 70% { box-shadow: 0 0 0 6px rgba(48,209,88,0); } 100% { box-shadow: 0 0 0 0 rgba(48,209,88,0); } }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  /* macOS window chrome */
+  .mac-window { background: var(--bg-window); border: 1px solid var(--stroke-soft); border-radius: 12px; box-shadow: var(--elev-4); overflow: hidden; }
+  .mac-titlebar { position: relative; display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: var(--bg-card); border-bottom: 1px solid var(--stroke-hairline); }
+  .mac-light { width: 12px; height: 12px; border-radius: 999px; flex-shrink: 0; }
+  .mac-light.r { background: #ff5f57; } .mac-light.y { background: #febc2e; } .mac-light.g { background: #28c840; }
+
+  /* code editor lines (reused by CodeApp) */
+  .editor-line { display: grid; grid-template-columns: 28px 1fr; gap: 8px; font-family: var(--font-mono); font-size: 11px; line-height: 1.7; padding: 0 10px; }
+  .editor-line .ln { text-align: right; color: var(--fg4); user-select: none; }
+  .ed-kw { color: var(--color-purple); } .ed-fn { color: var(--color-cyan); } .ed-str { color: var(--color-green); }
+  .ed-num { color: var(--color-orange); } .ed-cmt { color: var(--fg3); font-style: italic; } .ed-mute { color: var(--fg3); }
+  .caret { display: inline-block; width: 6px; height: 12px; background: var(--color-accent); vertical-align: -1px; margin-left: 1px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="appwidgets/atoms.jsx"></script>
+<script type="text/babel" src="appwidgets/sec-canvas.jsx"></script>
+<script type="text/babel" src="appwidgets/sec-nav.jsx"></script>
+<script type="text/babel" src="appwidgets/sec-launch.jsx"></script>
+<script type="text/babel" src="appwidgets/sec-hierarchy.jsx"></script>
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard, DCPostIt } = window;
+const {
+  CanvasModel, FullCanvasStates, CanvasMode, CanvasModeLaunched,
+  LaneControls, NewAppSplash, NewAppProposing, NewAppMounted,
+  AppsTab, DeleteAppTab,
+} = window;
+
+function Deck() {
+  return (
+    <DesignCanvas title="App widgets — scaling the substrate (ADR 0006)" subtitle="A third widget kind: a per-extension iframe served by the deno sidecar. Mocked across the gen-app design system.">
+
+      <DCSection id="a" title="A · An app owns the whole canvas" subtitle="Decision 6 — an app widget is never a card in the grid. A canvas tab holds a widget grid; an app tab renders one artifact full-bleed.">
+        <DCArtboard id="a-model" label="The model — canvas-of-widgets vs canvas-as-app" width={1280} height={620}>
+          <CanvasModel />
+        </DCArtboard>
+        <DCArtboard id="a-states" label="Lifecycle at full-canvas scale — cold start · error · ⋯ menu" width={1240} height={400}>
+          <FullCanvasStates />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="b" title="B · Canvas mode chrome" subtitle="Decision 6 — an app fills the canvas two ways. As its OWN tab you leave by switching tabs; LAUNCHED onto a canvas it overlays the grid, so Back-to-grid + Keep-as-tab apply.">
+        <DCArtboard id="b-tab" label="App as its own tab — leave via the tab strip (no back-to-grid)" width={1180} height={660}>
+          <CanvasMode />
+        </DCArtboard>
+        <DCArtboard id="b-launch" label="Launched onto a canvas — ephemeral overlay (Back to grid · Keep as tab)" width={1180} height={660}>
+          <CanvasModeLaunched />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="c" title="C · Apps in the tab strip" subtitle="Decision 7 — an app is a peer of a canvas. Both share one lane, told apart by shape; the lane's controls handle overflow and creating new canvases or apps.">
+        <DCArtboard id="c-controls" label="Lane controls — ⌵ overflow & + new (canvas / app)" width={900} height={520}>
+          <LaneControls />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="d" title="D · The “New app” flow" subtitle="Decision 7 — describe a tool, gen-app drafts an extension, the canvas-mode iframe mounts in place of the splash.">
+        <DCArtboard id="d-splash" label="1 · Splash — tell me what to build" width={1120} height={640}>
+          <NewAppSplash />
+        </DCArtboard>
+        <DCArtboard id="d-build" label="2 · propose_extension_change in chat" width={1120} height={640}>
+          <NewAppProposing />
+        </DCArtboard>
+        <DCArtboard id="d-mounted" label="3 · Mounted — the app, canvas mode" width={1120} height={640}>
+          <NewAppMounted />
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="e" title="E · Launch & discovery" subtitle="Decision 6/7 — the human-facing equivalents of the LLM's launch tools, plus the two-stage tab delete.">
+        <DCArtboard id="e-apps" label="Settings → Extensions → Apps tab" width={620} height={520}>
+          <AppsTab />
+        </DCArtboard>
+        <DCArtboard id="e-delete" label="Close an app tab — two-stage" width={460} height={420}>
+          <DeleteAppTab />
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+  );
+}
+
+const t = setInterval(() => {
+  if (window.DesignCanvas && window.CanvasModel && window.LaneControls) {
+    clearInterval(t);
+    ReactDOM.createRoot(document.getElementById("root")).render(<Deck />);
+    const draw = () => window.lucide && window.lucide.createIcons();
+    draw(); setTimeout(draw, 300); setTimeout(draw, 900); setTimeout(draw, 2000);
+  }
+}, 40);
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # gen-app Design System
 
-**Current version: `0.7.1`** · [Changelog](CHANGELOG.md)
+**Current version: `0.8.0`** · [Changelog](CHANGELOG.md)
 
 A design system for **gen-app** — a Tauri v2 desktop + iOS app where you chat with an LLM and it builds live, self-updating widgets on a canvas. The system codifies an iOS-first, dark-only aesthetic that scales gracefully into a resizable macOS window.
 
@@ -44,7 +44,7 @@ The system follows **design semver** — `MAJOR.MINOR.PATCH` mapped to design im
 | **MINOR** (`0.4.0`) | New components, new screens, new tokens, deprecations |
 | **PATCH** (`0.3.1`) | Token tweaks, copy fixes, bug fixes, asset replacements |
 
-Currently at **`0.7.1`** — early, expect breaking changes between minors. All changes are recorded in [CHANGELOG.md](CHANGELOG.md). The format is loosely [Keep a Changelog](https://keepachangelog.com) with two design-specific sections: **Reworked** (visual changes to existing surfaces) and **Flagged** (open questions / inferred decisions still pending).
+Currently at **`0.8.0`** — early, expect breaking changes between minors. All changes are recorded in [CHANGELOG.md](CHANGELOG.md). The format is loosely [Keep a Changelog](https://keepachangelog.com) with two design-specific sections: **Reworked** (visual changes to existing surfaces) and **Flagged** (open questions / inferred decisions still pending).
 
 When shipping a change:
 1. The unreleased entry at the top of `CHANGELOG.md` accumulates everything since the last tag.

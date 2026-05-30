@@ -294,11 +294,36 @@ function DCViewport({ children, minScale = 0.1, maxScale = 8, style = {} }) {
       clearTimeout(saveT.current);
       try { localStorage.setItem(tfKey, JSON.stringify(tf.current)); } catch {}
     };
+    // Fit content to width and pin near the top. Used when there's no saved
+    // viewport, or when a restored one would leave content off-screen.
+    const fitToContent = () => {
+      const vp = vpRef.current, w = worldRef.current;
+      if (!vp || !w) return;
+      const cw = w.offsetWidth || 1, vw = vp.clientWidth || 1;
+      const pad = 48;
+      const scale = Math.min(maxScale, Math.max(minScale, Math.min((vw - pad * 2) / cw, 1)));
+      tf.current = { x: Math.max(pad, (vw - cw * scale) / 2), y: pad, scale };
+      apply();
+    };
     try {
       const s = JSON.parse(localStorage.getItem(tfKey) || 'null');
       if (s && Number.isFinite(s.x) && Number.isFinite(s.y) && Number.isFinite(s.scale)) {
         tf.current = { x: s.x, y: s.y, scale: Math.min(maxScale, Math.max(minScale, s.scale)) };
         apply();
+        // Self-heal: a stale saved pan can park the viewport in empty world
+        // space (content fully off-screen) — the canvas then looks blank. After
+        // layout settles, check the world actually overlaps the viewport; if
+        // not, discard the saved transform and fit to content.
+        requestAnimationFrame(() => {
+          const vp = vpRef.current, w = worldRef.current;
+          if (!vp || !w) return;
+          const vr = vp.getBoundingClientRect(), wr = w.getBoundingClientRect();
+          const overlap = wr.right > vr.left + 40 && wr.left < vr.right - 40 &&
+                          wr.bottom > vr.top + 40 && wr.top < vr.bottom - 40;
+          if (!overlap) fitToContent();
+        });
+      } else {
+        requestAnimationFrame(fitToContent);
       }
     } catch {}
     // Flush on pagehide and unmount so a reload within the 200ms debounce

@@ -421,6 +421,24 @@ function CalendarWidget({ date, events, selected, onSelect, symbol, isNew, onDel
   );
 }
 
+function ListWidget({ title, items = [], selected, onSelect, symbol, isNew, onDelete, onAddressInChat, onRetag }) {
+  return (
+    <WidgetShell kind="list" sourceSpec={{ kind: "list", symbol, props: {}, status: "live", payload: { title, items } }} title={title} status={{ tone: "live", label: "just installed" }} selected={selected} onSelect={onSelect} symbol={symbol} isNew={isNew} onDelete={onDelete} onAddressInChat={onAddressInChat} onRetag={onRetag}>
+      <div className="col" style={{ gap: 2, marginTop: 2 }}>
+        {items.map((it, i) => (
+          <div key={i} style={{ display: "flex", gap: 10, alignItems: "baseline", padding: "5px 0", borderBottom: i < items.length - 1 ? "1px solid var(--stroke-hairline)" : "none" }}>
+            <div style={{ color: "var(--fg2)", fontFamily: "var(--font-mono)", fontSize: 11, minWidth: 28, textAlign: "right" }}>{i + 1}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ color: "var(--fg1)", fontSize: 13, lineHeight: 1.3 }}>{it.title}</div>
+              {it.meta && <div style={{ color: "var(--fg3)", fontSize: 11, fontFamily: "var(--font-mono)", marginTop: 1 }}>{it.meta}</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </WidgetShell>
+  );
+}
+
 function PendingWidget({ prompt, selected, onSelect, symbol, isNew, onDelete, onAddressInChat, onRetag }) {
   return (
     <WidgetShell title="Cooking up…" status={{ tone: "pending", label: "pending" }} selected={selected} onSelect={onSelect} symbol={symbol} isNew={isNew} onDelete={onDelete} onAddressInChat={onAddressInChat} onRetag={onRetag}>
@@ -441,9 +459,10 @@ function Widget(props) {
     weather:  WeatherWidget,
     stock:    StockWidget,
     calendar: CalendarWidget,
+    list:     ListWidget,
     pending:  PendingWidget
   })[props.kind] || (() => null);
   return <Comp {...props} />;
 }
 
-Object.assign(window, { Widget, WidgetShell, WeatherWidget, StockWidget, CalendarWidget, PendingWidget });
+Object.assign(window, { Widget, WidgetShell, WeatherWidget, StockWidget, CalendarWidget, ListWidget, PendingWidget });

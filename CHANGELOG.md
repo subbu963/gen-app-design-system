@@ -8,6 +8,71 @@ _Nothing yet — next change lands here._
 
 ---
 
+## [0.8.0] — 2026-05-30
+
+The **app-widgets** release. Phase 1's `bigger-picture` branch (ADR 0006) scales the widget substrate to app-sized artifacts: a third widget kind that, unlike a declarative or glue widget, is **never a card in the grid — it takes the whole canvas**. Apps are peers of canvases in the tab strip. Explored across `App Widgets.html`, the core surfaces are now wired into the kit.
+
+### Added
+- **`AppWidget.jsx`** (new file) — the whole app-widget substrate for the click-thru:
+  - **`useAppLane()`** — the lane state machine. Holds `apps` in **recent-first** order, the `activeAppId` (null = a canvas is active), and a `launchedOver` flag for an ephemeral session. `openApp(id)` moves an app to the front and activates it; `openApp(id, { ephemeral: true })` opens it as a session over the current canvas; `closeApp` / `keepAsTab` / `newApp(spec?)` round it out. Seeds four apps (Workouts · calendar, Projects · kanban, Notes, Reading) so overflow + recency are demoable out of the box.
+  - **`LaneTabs`** — canvas tabs and app tabs in **one shared lane**, told apart by shape: canvas tabs are pills with an outline `layout-grid` glyph; app tabs carry a coloured **app-icon squircle** (`AppGlyph`) + name + a green running dot. Only `LANE_MAX_INLINE_APPS` (3) fit inline; the rest collapse into a **⌄ overflow menu** (recent-first, opening one promotes it to the front and slides the oldest into overflow). The trailing **+** opens a **New** menu — *New canvas* / *New app*.
+  - **`AppView`** — the full-bleed app body that replaces the widget grid when an app tab is active. Carries the served-by-extension hairline (`iframe · 127.0.0.1 · <ext>` + `sandboxed`), and — when `launchedOver` — a **Back to grid** pill (`esc`) plus a **Keep as tab** promote button. The floating chat dock stays mounted over it.
+  - **On-brand app contents** — `AppCalendar` (month grid), `AppKanban` (board), `AppNotes` (list + detail), all built from tokens only. Mapped through `APP_VIEWS` by each app's `view`.
+- **App-widget styles** in `styles.css` — `.lane-divider`, `.app-tab` (+ `.on`), `.app-dot`, `.lane-of` overflow chip, `.lane-menu` (+ head / row / `row-lg` / sep / ic), and the `.appview` block (origin hairline, body, `appview-pill` left/right, `appview-kbd`). Anchored to the existing `.canvas-tabs` row and `.mac-content`.
+- **Tweaks → App widgets** — Open Workouts app · Launch Projects over canvas (ephemeral) · New app · Back to grid, so the substrate is reachable without the host.
+
+### Reworked
+- **`App.jsx` desktop frame.** The root mounts `useAppLane()` and threads it into `DesktopApp`. The desktop tab strip swaps `CanvasTabs` → **`LaneTabs`** (canvas tabs gain the grid glyph; app tabs join the lane). The content area now renders **`AppView` when an app tab is active, the widget `Canvas` otherwise** — switching to any canvas tab calls `closeApp` first, so an app and a grid are never shown at once. The chat dock's `contextLabel` follows the active app's name.
+- **`index.html` load order** — `AppWidget.jsx` loads right after `Canvas.jsx` (needs `Icon`, used by `App.jsx`).
+- **Version lines** — `README` (current + versioning), `SKILL.md` front-matter, and the iOS settings root + About row all move to `0.8.0`.
+
+### Flagged
+- **Desktop only.** App mode is wired into the desktop frame; the iPhone frame still shows the widget grid for every canvas. The iOS presentation of a full-bleed app (and whether app tabs even belong in the iOS canvas dropdown) is unbuilt — same desktop-first staging as the deno runtime in 0.7.0.
+- **Overflow cutoff is a fixed count, not measured.** `LANE_MAX_INLINE_APPS = 3` stands in for a real width measurement. A production lane measures available px and reflows; the kit fakes it so the overflow + recency behaviour is visible with the four seed apps.
+- **App contents are static mocks.** `AppCalendar` / `AppKanban` / `AppNotes` are themed stand-ins for what a real extension serves into the loopback iframe — there's no bridge, no subprocess, no token broadcast across an iframe boundary. The served-by hairline documents the contract; it doesn't run it.
+- **No `New app` authoring flow.** The **+ → New app** menu and `newApp()` drop a pre-seeded app straight onto the lane; they don't run the splash → `propose_extension_change` → mount sequence from `App Widgets.html`. Wiring it through the existing `useAuthoring()` loop is the obvious next step.
+- **Launch vs Open, View source, permissions, dev-MCP debugging** — the Settings → Apps tab, the per-kind view-source sheet, the cross-extension permission prompt, and the bridge-log / subprocess debugging surfaces were explored in earlier passes of `App Widgets.html` but are **not** in this cut. They remain component-file-ready for a follow-up.
+
+### Exploration (mockups, not shipped)
+- **`App Widgets.html`** — the design-canvas the substrate was worked out on (final cut: the canvas-vs-app model · both canvas-mode states · the shared-lane controls · the new-app flow · launch & discovery). Key corrections that shaped the wiring: an app is **never a grid card** (it owns the canvas); canvases and apps share **one lane** disambiguated by shape; "Back to grid" only belongs to an app **launched over** a canvas, not to an app that is its **own tab**; and the lane is width-bound, so overflow + recent-first ordering are first-class.
+
+---
+
+## [0.7.2] — 2026-05-29
+
+Live-authoring release. Wires the in-app code editor that appears **while the agent is writing an extension** straight into the kit — the feature explored across `Live Editor Mockups.html` is now a working surface on the desktop canvas. The headline decision held: the editor is a **floating overlay**, never a layout column — it must not reflow the canvas or the bottom-right chat dock.
+
+### Added
+- **`LiveAuthoring.jsx`** (new file) — the whole feature, ~480 lines:
+  - **Persisted setting** — `getLiveCodingMode` / `setLiveCodingMode` / `useLiveCodingMode` backed by `localStorage["genapp-livecoding"]` + a `genapp-livecoding` custom event (mirrors the theme-persistence pattern). Shape: `{ display: "pill" | "float" | "focus", pauseOnRead, autoClose }`, default `float`.
+  - **`useAuthoring()` state machine** — `start(spec, onApply)` seeds a session and streams each file's content in char-by-char (13 chars / 24 ms) across the folder's file `order`, advancing tab-to-tab, then flips `status: "done"`. Exposes `pause` / `resume` / `setView` / `setActive` / `close` / `apply`.
+  - **`LiveAuthoringOverlay`** — three presentations driven by `display`: a **floating editor card** (anchored top-left over a dimmed canvas, clear of the dock), a **focus sheet** (centred, larger, heavier scrim), and a **minimized pill** (bottom-left, no scrim, determinate progress bar + file counter so you can watch the widget fill in). Header carries grip handle + `extensions/<id>/` breadcrumb + runtime chip + Pause/Resume · Minimize · Float↔Focus · Close; file tab strip with `new` badges + a pulse on the file being written; green "Agent is writing… · tool: propose_change" status row that flips to "Authored N files · ready to install"; footer Reject all / Apply & install (enabled only when done). Esc closes; clicking the float scrim minimizes.
+  - **Lightweight streaming highlighter** — regex tokenizer (keywords / strings / numbers / comments) rendering into `<span>`s with a blinking caret, instead of mounting CodeMirror per keystroke (read-only stream, so far cheaper).
+  - **Two extension seeds + `matchExtension(text)`** — `HN_EXT` (hacker-news worker extension: `manifest.json` + `src/index.js`, produces a 5-row Hacker News list widget) and `RSS_EXT`; the matcher fires on "hacker news"/"hn", "rss"/"feed", or "…extension" + a create verb.
+  - **`LiveCodingPanel`** — the Settings → Developer panel: three radio modes (Stay minimized / Float / Open and focus) + two toggles (Pause when reading / Auto-close on turn end), all writing through `setLiveCodingMode`, plus a "try it" hint.
+- **`ListWidget` (kind `list`)** in `Widget.jsx` — numbered rows with title + mono meta line; registered in the `Widget` kind map and on `window`. Lets the authored Hacker News extension produce a real, rendered canvas widget instead of a stub.
+- **Developer section** in `Settings.jsx` `SECTIONS` — cyan `code-2` icon, hosts `window.LiveCodingPanel`, shows on both desktop split-sheet and iOS nav-stack.
+- **`.la-*` styles** in `styles.css` — scrim (float + focus variants), floating card (with `pop` keyframe) and focus variant, header, tab strip, status row, streaming code block (`la-kw`/`la-str`/`la-num`/`la-cmt` + blinking `la-caret`), footer, minimized pill (`la-pill` with progress bar), and a shared pulsing `la-dot`. All anchored to `.mac-content` (already `position: relative`), so the overlay stays inside the desktop frame and never covers the iPhone.
+
+### Reworked
+- **`App.jsx` desktop send path.** `useCanvases` gained `pushUser` / `pushAgent` / `addWidget` (direct chat + canvas writes outside the `routePrompt` flow). The root mounts `useAuthoring()` and wraps desktop send: a prompt that `matchExtension` recognises (and isn't addressing existing widgets) now pushes the user line + an agent "Drafting…" line and kicks off `authoring.start(...)`; on **Apply & install** the widget is added to the canvas and an "Installed …" line is posted. Non-matching prompts fall through to the normal chat path untouched. `DesktopApp` takes `onSend` + `authoring` and renders `<LiveAuthoringOverlay>` inside its frame. A Tweaks button — "Author HN extension (live)" — triggers the flow without typing.
+- **`index.html` load order** — `LiveAuthoring.jsx` loads after `SecretsAndExtensions.jsx` and before `Settings.jsx`, so `window.LiveCodingPanel` exists when `SECTIONS` is evaluated.
+
+### Flagged
+- **Lightest mode is a pill, not an in-chat chip.** The exploration's "Show a chip in chat" mode would need a custom chat-message renderer to make a transcript chip clickable; the wired version uses the minimized **pill** as the lightweight handle instead (reuses the 2b exploration). The setting option is relabelled "Stay minimized (pill)". Building the true in-chat clickable chip is still open.
+- **Streaming is simulated.** The editor types the seed file content on a timer — there's no real model/tool loop. Pause/Resume gate the timer; `pauseOnRead` is stored but not yet wired to scroll/focus detection; `autoClose` is wired (dismisses on done unless in focus mode).
+- **Desktop only.** The overlay is not rendered on the iPhone frame — the iOS bottom-sheet presentation from the mockups is still unbuilt. iOS chat keeps the normal path.
+- **Dock-to-side / Pop-out not carried over.** The mockup's dock-to-side and pop-out-to-window affordances are not in the wired header (only Pause · Minimize · Float↔Focus · Close). Pop-out to a real Tauri window remains a flagged idea.
+- **`matchExtension` is keyword-based.** Two seeds (HN, RSS) and a coarse regex; a real build resolves this from the model's actual `propose_change` tool calls.
+
+### Exploration (mockups, not shipped)
+- **`Live Editor Mockups.html`** — the five-scene canvas the feature was designed in (setting · chip-in-chat · floating editor · minimized pill · iOS bottom sheet). Two corrections landed during exploration: the chat dock was redrawn as the real floating `320×380` bottom-right card (not a full-height rail), and the editor was reframed from a canvas-crushing side column to a floating overlay.
+- **`Folder Editor Polish.html`** — layout diagnosis (Today / Tight / Nested tree) + the library shortlist behind `react-arborist` + `@uiw/react-codemirror`.
+- **`Folder Editor with AI Panel.html`** — the Ask AI panel exploration (open + collapsed rail) that became `AskAIPanel` / `CollapsedAIRail` in 0.7.1.
+- **`Extension System Mockups v2.html`** — the four-option follow-up (runtime chooser · worker iOS hint · MCP × runtime chip · About) folded into 0.7.1.
+
+---
+
 ## [0.7.1] — 2026-05-28
 
 UI kit patch. The kit's `ExtensionEditor` was a single-textarea CodeMirror 5 surface stuck on the old `manifest.refresh + async function run(ctx)` schema — out of sync with the 0.7.0 folder-and-runtime model. This bump rebuilds it around `react-arborist` for the tree and `@uiw/react-codemirror` for the editor, wires the Settings extensions list to the new chip vocabulary, and adds the **Ask AI** side panel + collapsed rail behind the same surface so the agent's authoring flow has a place to live in the kit.
