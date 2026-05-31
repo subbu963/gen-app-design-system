@@ -2,7 +2,7 @@
 name: gen-app-design
 description: Use this skill to generate well-branded interfaces and assets for gen-app, either for production or throwaway prototypes/mocks/etc. Contains essential design guidelines, colors, type, fonts, assets, and UI kit components for prototyping a Tauri v2 desktop + iOS LLM-widgets-on-a-canvas app.
 user-invocable: true
-version: 0.8.0
+version: 0.8.1
 ---
 
 # gen-app design skill

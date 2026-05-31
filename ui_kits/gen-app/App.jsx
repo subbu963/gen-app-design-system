@@ -347,7 +347,7 @@ function DesktopApp({ chat, lane, onOpenSettings, onSend, authoring }) {
         onNewApp={() => lane.newApp()}
       />
       {lane.activeApp
-        ? <AppView app={lane.activeApp} launchedOver={lane.launchedOver} onBackToGrid={lane.closeApp} onKeepAsTab={lane.keepAsTab} />
+        ? <AppView app={lane.activeApp} launchedOver={lane.launchedOver} onBackToGrid={lane.closeApp} onKeepAsTab={lane.keepAsTab} onClose={lane.closeApp} />
         : <Canvas widgets={chat.widgets} selected={chat.selected} onSelect={chat.select} onDelete={chat.removeWidget} onAddressInChat={chat.addressInChat} onRetag={chat.retagWidget} />}
       <ChatDock
         messages={chat.messages}

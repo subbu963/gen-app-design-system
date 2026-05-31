@@ -8,6 +8,28 @@ _Nothing yet — next change lands here._
 
 ---
 
+## [0.8.1] — 2026-05-31
+
+App widgets gain an **options menu**. Patch over 0.8.0.
+
+### Added
+- **App options on the served-by hairline.** The `appview-origin` strip (the `iframe · 127.0.0.1 · <ext> · sandboxed` line at the top of a full-bleed app) now carries a **⋯** at its right end. It opens an `AppOptionsMenu` headed by the app's icon + name + extension id, with **Reload app · View source · Open in editor · Permissions — Close app** (`⌘⌫`). Placement was chosen over the app-tab and window-toolbar alternatives (explored in `App Options Placement.html`): the hairline already names the backing extension, so a source/options menu reads naturally there, right where the extension identity lives.
+- **`AppOptionsMenu`** + **`AppReloading`** in `AppWidget.jsx`. *Reload app* swaps the body for a brief "restarting extension…" shimmer (`appview-spin`) so the action reads as real; *Close app* exits to the grid. Menu closes on outside-click and when the active app changes.
+- **Styles** in `styles.css` — `.appview-opts` (+ `.on`), `.appopts-menu` / `.appopts-head` / `.appopts-row` / `.appopts-sep`, and the `appview-spin` keyframe.
+
+### Changed
+- `AppView` takes an `onClose` prop (threaded from `App.jsx` → `lane.closeApp`) so the menu's Close lands back on the widget grid.
+- Version lines → `0.8.1` (README ×2, SKILL front-matter, iOS settings root + About row).
+
+### Flagged
+- View source / Open in editor / Permissions are **menu stubs** — they don't yet open the per-kind source sheet, the editor, or the permission inspector. Wiring them to real surfaces is the follow-up (those surfaces were explored earlier in `App Widgets.html` but aren't in the kit).
+- Hairline placement means options are reachable only while an app is **open**; a backgrounded app (inactive tab) has no ⋯. Acceptable for now since options act on the *current* app, but revisit if per-tab actions (e.g. close-from-tab) are wanted.
+
+### Exploration (mockups, not shipped)
+- **`App Options Placement.html`** — the three-way comparison (app tab · served-by hairline · window toolbar) the placement decision came out of.
+
+---
+
 ## [0.8.0] — 2026-05-30
 
 The **app-widgets** release. Phase 1's `bigger-picture` branch (ADR 0006) scales the widget substrate to app-sized artifacts: a third widget kind that, unlike a declarative or glue widget, is **never a card in the grid — it takes the whole canvas**. Apps are peers of canvases in the tab strip. Explored across `App Widgets.html`, the core surfaces are now wired into the kit.

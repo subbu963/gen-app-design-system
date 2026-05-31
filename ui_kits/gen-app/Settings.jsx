@@ -1209,7 +1209,7 @@ const SECTIONS = [
   { id: "developer",  name: "Developer",  iosName: "Developer", icon: "code-2",  bg: "var(--color-cyan)",     sub: "Live coding",          Panel: window.LiveCodingPanel },
   { id: "secrets",    name: "Secrets",    iosName: "Vault",   icon: "key",       bg: "var(--color-yellow)",   sub: "4 in keychain",        Panel: SecretsPanel },
   { id: "logs",       name: "Logs",       iosName: "Diaries", icon: "file-text", bg: "var(--fg2)",            sub: "Live · 8 events",    Panel: LogsPanel },
-  { id: "about",      name: "About",      iosName: "About",   icon: "info",      bg: "var(--color-indigo)",   sub: "v0.8.0 · deno v2.1.4", Panel: AboutPanel },
+  { id: "about",      name: "About",      iosName: "About",   icon: "info",      bg: "var(--color-indigo)",   sub: "v0.8.1 · deno v2.1.4", Panel: AboutPanel },
 ];
 
 /* ---------- Desktop settings (split sheet) ---------- */
@@ -1282,7 +1282,7 @@ function IOSSettings({ onClose }) {
             ))}
           </div>
           <div className="footnote" style={{ marginTop: 14, textAlign: "center" }}>
-            <span className="brand-display" style={{ fontSize: 16 }}>gen·app</span> · v0.8.0
+            <span className="brand-display" style={{ fontSize: 16 }}>gen·app</span> · v0.8.1
           </div>
         </div>
       </div>

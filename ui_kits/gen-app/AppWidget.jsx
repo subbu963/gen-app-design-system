@@ -141,19 +141,69 @@ function AppNotes() {
 const APP_VIEWS = { calendar: AppCalendar, kanban: AppKanban, notes: AppNotes };
 
 /* ---------- Full-bleed app view (replaces the widget grid) ---------- */
-function AppView({ app, launchedOver, onBackToGrid, onKeepAsTab }) {
+/* ---------- App options menu (lives on the served-by hairline) ---------- */
+function AppOptionsMenu({ app, onReload, onClose }) {
+  const Item = ({ icon, label, hint, danger, onClick }) => (
+    <button className="appopts-row" onClick={onClick} style={danger ? { color: "var(--color-red)" } : undefined}>
+      <Icon name={icon} size={14} color={danger ? "var(--color-red)" : "var(--fg2)"} />
+      <span style={{ flex: 1, textAlign: "left" }}>{label}</span>
+      {hint && <kbd className="appview-kbd">{hint}</kbd>}
+    </button>
+  );
+  return (
+    <div className="appopts-menu">
+      <div className="appopts-head">
+        <AppGlyph icon={app.icon} color={app.color} size={16} />
+        <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--fg1)" }}>{app.name}</span>
+        <span style={{ flex: 1 }}></span>
+        <span style={{ fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--fg3)" }}>{app.ext}</span>
+      </div>
+      <Item icon="rotate-cw" label="Reload app" onClick={onReload} />
+      <Item icon="code-2" label="View source" />
+      <Item icon="folder-open" label="Open in editor" />
+      <Item icon="shield" label="Permissions" />
+      <div className="appopts-sep"></div>
+      <Item icon="x" label="Close app" hint="⌘⌫" danger onClick={onClose} />
+    </div>
+  );
+}
+
+/* ---------- Full-bleed app view (replaces the widget grid) ---------- */
+function AppView({ app, launchedOver, onBackToGrid, onKeepAsTab, onClose }) {
   const Body = APP_VIEWS[app.view] || AppCalendar;
+  const [optsOpen, setOptsOpen] = React.useState(false);
+  const [reloading, setReloading] = React.useState(false);
+  const optsRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!optsOpen) return;
+    const onDoc = (e) => { if (optsRef.current && !optsRef.current.contains(e.target)) setOptsOpen(false); };
+    window.addEventListener("mousedown", onDoc);
+    return () => window.removeEventListener("mousedown", onDoc);
+  }, [optsOpen]);
+
+  // close the menu when switching apps
+  React.useEffect(() => { setOptsOpen(false); }, [app.id]);
+
+  const reload = () => { setOptsOpen(false); setReloading(true); setTimeout(() => setReloading(false), 600); };
+
   return (
     <div className="appview">
-      {/* served-by-extension hairline, mirrors the loopback-iframe story */}
+      {/* served-by-extension hairline — also the home for app options (⋯) */}
       <div className="appview-origin">
         <Icon name="square-dashed" size={11} color="var(--fg3)" />
         <span>iframe · 127.0.0.1 · {app.ext}</span>
         <span style={{ flex: 1 }}></span>
         <Icon name="shield" size={11} color="var(--color-green)" />
         <span style={{ color: "var(--color-green)" }}>sandboxed</span>
+        <div ref={optsRef} style={{ position: "relative", display: "inline-flex", marginLeft: 4 }}>
+          <button className={`appview-opts ${optsOpen ? "on" : ""}`} onClick={() => setOptsOpen(o => !o)} title="App options">
+            <Icon name="more-horizontal" size={12} color={optsOpen ? "var(--color-accent)" : "var(--fg2)"} />
+          </button>
+          {optsOpen && <AppOptionsMenu app={app} onReload={reload} onClose={onClose} />}
+        </div>
       </div>
-      <div className="appview-body"><Body /></div>
+      <div className="appview-body">{reloading ? <AppReloading /> : <Body />}</div>
 
       {launchedOver && (
         <>
@@ -168,6 +218,16 @@ function AppView({ app, launchedOver, onBackToGrid, onKeepAsTab }) {
           </button>
         </>
       )}
+    </div>
+  );
+}
+
+/* brief reload shimmer so "Reload app" reads as a real action */
+function AppReloading() {
+  return (
+    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "var(--bg-window)" }}>
+      <span className="appview-spin"><Icon name="loader" size={15} color="var(--fg3)" /></span>
+      <span style={{ fontSize: 11.5, fontFamily: "var(--font-mono)", color: "var(--fg3)" }}>restarting extension…</span>
     </div>
   );
 }

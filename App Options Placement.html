@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>gen-app · Where do app options live?</title>
+<link rel="stylesheet" href="colors_and_type.css" />
+<script src="tailwind.js"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: var(--bg-base); color: var(--fg1); font-family: var(--font-sans); }
+  #root { min-height: 100%; }
+  .text-fg1{color:var(--fg1)} .text-fg2{color:var(--fg2)} .text-fg3{color:var(--fg3)} .text-accent{color:var(--color-accent)} .text-green{color:var(--color-green)}
+  .anno { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700; }
+
+  .mac-window { background: var(--bg-window); border: 1px solid var(--stroke-soft); border-radius: 12px; box-shadow: var(--elev-3); overflow: hidden; }
+  .mac-titlebar { position: relative; display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: var(--bg-card); border-bottom: 1px solid var(--stroke-hairline); }
+  .mac-light { width: 11px; height: 11px; border-radius: 999px; flex-shrink: 0; }
+  .mac-light.r { background: #ff5f57; } .mac-light.y { background: #febc2e; } .mac-light.g { background: #28c840; }
+
+  .recbadge { font-size: 9px; font-weight: 700; letter-spacing: 0.05em; padding: 2px 7px; border-radius: 999px; background: var(--color-accent-tint); color: var(--color-accent); }
+  .altbadge { font-size: 9px; font-weight: 700; letter-spacing: 0.05em; padding: 2px 7px; border-radius: 999px; background: var(--bg-card-elevated); color: var(--fg3); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+function I({ n, c = "", s }) { return <i data-lucide={n} className={c} style={s}></i>; }
+
+/* squircle app icon */
+function AppGlyph({ icon, color, size = 18 }) {
+  return (
+    <span style={{ width: size, height: size, borderRadius: size * 0.32, flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center",
+      background: `color-mix(in oklab, ${color} 28%, var(--bg-card))`, border: `1px solid color-mix(in oklab, ${color} 55%, transparent)`, boxShadow: `inset 0 1px 0 color-mix(in oklab, ${color} 35%, transparent)` }}>
+      <I n={icon} c="" s={{ width: size * 0.56, height: size * 0.56, color }} />
+    </span>
+  );
+}
+
+/* the options menu (shared across all three placements) */
+function OptionsMenu({ style }) {
+  const Item = ({ icon, label, hint, danger }) => (
+    <div className="flex items-center gap-2.5 px-3 py-1.5 cursor-pointer" style={{ color: danger ? "var(--color-red)" : "var(--fg1)" }}>
+      <I n={icon} c="w-3.5 h-3.5" s={{ opacity: 0.85 }} /><span className="text-[12px] flex-1">{label}</span>
+      {hint && <span className="font-mono text-[9.5px]" style={{ color: "var(--fg3)" }}>{hint}</span>}
+    </div>
+  );
+  const Sep = () => <div style={{ height: 1, background: "var(--stroke-hairline)", margin: "4px 0" }}></div>;
+  return (
+    <div className="absolute z-30 rounded-[12px] py-1.5 w-[206px]" style={{ background: "var(--vibrancy-popover)", backdropFilter: "var(--blur-thin)", border: "1px solid var(--stroke-soft)", boxShadow: "var(--elev-3)", ...style }}>
+      <div className="px-3 py-1 flex items-center gap-1.5" style={{ borderBottom: "1px solid var(--stroke-hairline)", marginBottom: 4 }}>
+        <AppGlyph icon="dumbbell" color="var(--color-green)" size={15} /><span className="text-[11px] font-semibold text-fg1">Workouts</span>
+        <span className="flex-1"></span><span className="font-mono text-[9px] text-fg3">workout-cal</span>
+      </div>
+      <Item icon="rotate-cw" label="Reload app" />
+      <Item icon="code-2" label="View source" />
+      <Item icon="folder-open" label="Open in editor" />
+      <Item icon="shield" label="Permissions" />
+      <Sep />
+      <Item icon="pin" label="Keep as tab" />
+      <Item icon="x" label="Close app" danger />
+    </div>
+  );
+}
+
+/* the lane (canvas tab + app tabs) */
+function Lane({ tabDots }) {
+  const apps = [{ icon: "dumbbell", color: "var(--color-green)", name: "Workouts", on: true }, { icon: "map", color: "var(--color-accent)", name: "Trip map" }];
+  return (
+    <div className="flex-1 flex items-center justify-center">
+      <div className="flex items-center gap-1.5 px-1.5 py-1 rounded-full" style={{ background: "var(--bg-window)" }}>
+        <span className="text-[11px] px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 text-fg2"><I n="layout-grid" c="" s={{ width: 11, height: 11, color: "var(--fg3)" }} />Planning</span>
+        <div style={{ width: 1, height: 18, background: "var(--stroke-hairline)", margin: "0 2px" }}></div>
+        {apps.map((a, i) => (
+          <span key={i} className="inline-flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-full relative" style={{ background: a.on ? `color-mix(in oklab, ${a.color} 15%, transparent)` : "transparent", border: a.on ? `1px solid color-mix(in oklab, ${a.color} 45%, transparent)` : "1px solid transparent" }}>
+            <AppGlyph icon={a.icon} color={a.color} size={17} />
+            <span className="text-[11px]" style={{ color: a.on ? "var(--fg1)" : "var(--fg2)", fontWeight: a.on ? 600 : 500 }}>{a.name}</span>
+            {a.on && tabDots && (
+              <button className="w-4 h-4 rounded inline-flex items-center justify-center bg-transparent border-none cursor-pointer ml-0.5" style={{ background: "rgba(255,255,255,0.08)" }}><I n="more-horizontal" c="" s={{ width: 12, height: 12, color: "var(--fg1)" }} /></button>
+            )}
+            {!a.on ? null : <span className="rounded-full" style={{ width: 5, height: 5, background: "var(--color-green)" }}></span>}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* a tiny calendar so the body reads as a real app */
+function MiniCal() {
+  const days = Array.from({ length: 28 }, (_, i) => i + 1);
+  const ev = { 4: "var(--color-accent)", 12: "var(--color-orange)", 18: "var(--color-green)" };
+  return (
+    <div className="w-full h-full flex flex-col" style={{ background: "var(--bg-window)" }}>
+      <div className="flex items-center gap-2 px-3 py-2" style={{ borderBottom: "1px solid var(--stroke-hairline)" }}>
+        <div className="text-[12px] font-semibold text-fg1">May 2026</div><span className="flex-1"></span>
+        <I n="chevron-left" c="w-3.5 h-3.5 text-fg3" /><I n="chevron-right" c="w-3.5 h-3.5 text-fg3" />
+      </div>
+      <div className="grid grid-cols-7 gap-1 p-2 flex-1">
+        {days.map((d) => (
+          <div key={d} className="rounded-md flex items-start justify-center pt-1 relative" style={{ background: d === 12 ? "var(--color-accent-tint)" : "var(--bg-card)", border: d === 12 ? "1px solid var(--color-accent)" : "1px solid transparent" }}>
+            <span className="text-[9px]" style={{ color: d === 12 ? "var(--color-accent)" : "var(--fg2)", fontWeight: d === 12 ? 700 : 400 }}>{d}</span>
+            {ev[d] && <span className="absolute bottom-1 w-1 h-1 rounded-full" style={{ background: ev[d] }}></span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* origin hairline */
+function Origin({ withDots }) {
+  return (
+    <div className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[9.5px] relative" style={{ color: "var(--fg3)", borderBottom: "1px solid var(--stroke-hairline)", background: "rgba(255,255,255,0.012)" }}>
+      <I n="square-dashed" c="w-2.5 h-2.5" /><span>iframe · 127.0.0.1 · workout-cal</span>
+      <span className="flex-1"></span>
+      <I n="shield" c="w-2.5 h-2.5 text-green" /><span style={{ color: "var(--color-green)" }}>sandboxed</span>
+      {withDots && <button className="w-4 h-4 rounded inline-flex items-center justify-center bg-transparent border-none cursor-pointer ml-1" style={{ background: "rgba(255,255,255,0.06)" }}><I n="more-horizontal" c="" s={{ width: 12, height: 12, color: "var(--fg2)" }} /></button>}
+    </div>
+  );
+}
+
+function Frame({ badge, badgeKind, title, sub, children, note }) {
+  return (
+    <div className="flex flex-col gap-2.5" style={{ width: 360 }}>
+      <div className="flex items-center gap-2">
+        <span className={badgeKind === "rec" ? "recbadge" : "altbadge"}>{badge}</span>
+        <span className="text-[13px] font-semibold text-fg1">{title}</span>
+      </div>
+      <div className="mac-window flex flex-col" style={{ height: 290 }}>{children}</div>
+      <div className="text-[11px] leading-[1.5] text-fg2" style={{ minHeight: 56 }}>{note}</div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <div style={{ padding: 36, minHeight: "100vh", boxSizing: "border-box" }}>
+      <div className="flex items-baseline gap-3 mb-1">
+        <h1 className="brand-display" style={{ fontSize: 30, color: "var(--fg1)", margin: 0 }}>Where do app options live?</h1>
+      </div>
+      <p className="text-[13px] text-fg2" style={{ maxWidth: 760, lineHeight: 1.55, marginTop: 6, marginBottom: 28 }}>
+        An app has no card header to hang a ⋯ on — it's a full-bleed tab. Its options (Reload · View source · Open in editor · Permissions · Close) are extension-level and infrequent, so they want a stable, identity-anchored home rather than a floating control.
+      </p>
+
+      <div className="flex items-start gap-7 flex-wrap">
+        {/* OPTION 1 — on the app tab (recommended) */}
+        <Frame badge="RECOMMENDED" badgeKind="rec" title="On the app tab"
+          note={<>The tab is the app's handle whether it's open or backgrounded — and already where you close it. A ⋯ shows on the <span className="text-fg1">active</span> tab; <span className="text-fg1">right-click</span> any app tab for the same menu. One rule, works for every app in the lane.</>}>
+          <div className="mac-titlebar">
+            <span className="mac-light r"></span><span className="mac-light y"></span><span className="mac-light g"></span>
+            <Lane tabDots />
+            <div style={{ width: 30 }}></div>
+            <OptionsMenu style={{ top: 38, left: "50%", marginLeft: -20 }} />
+          </div>
+          <div className="flex-1 min-h-0 relative">
+            <Origin />
+            <div className="absolute left-0 right-0 bottom-0" style={{ top: 23 }}><MiniCal /></div>
+          </div>
+        </Frame>
+
+        {/* OPTION 2 — on the served-by hairline */}
+        <Frame badge="ALT" badgeKind="alt" title="On the served-by hairline"
+          note={<>The strip already names the backing extension, so a source menu reads naturally here. But it only exists while the app is <span className="text-fg1">open</span> (no handle for a backgrounded app), and it muddies a strip meant to read as inert “sandboxed” chrome.</>}>
+          <div className="mac-titlebar">
+            <span className="mac-light r"></span><span className="mac-light y"></span><span className="mac-light g"></span>
+            <Lane />
+            <div style={{ width: 30 }}></div>
+          </div>
+          <div className="flex-1 min-h-0 relative">
+            <Origin withDots />
+            <div className="absolute left-0 right-0 bottom-0" style={{ top: 23 }}><MiniCal /></div>
+            <OptionsMenu style={{ top: 26, right: 8 }} />
+          </div>
+        </Frame>
+
+        {/* OPTION 3 — window toolbar */}
+        <Frame badge="ALT" badgeKind="alt" title="In the window toolbar"
+          note={<>Conventional macOS placement, top-right. But it floats free of <span className="text-fg1">which</span> app it acts on — ambiguous the moment a launched app overlays a canvas, or you're glancing between several. Disconnected from the lane's identity language.</>}>
+          <div className="mac-titlebar">
+            <span className="mac-light r"></span><span className="mac-light y"></span><span className="mac-light g"></span>
+            <Lane />
+            <button className="w-6 h-6 rounded-md inline-flex items-center justify-center bg-transparent border-none cursor-pointer relative" style={{ background: "rgba(255,255,255,0.06)" }}><I n="more-horizontal" c="" s={{ width: 14, height: 14, color: "var(--fg2)" }} /></button>
+            <OptionsMenu style={{ top: 36, right: 6 }} />
+          </div>
+          <div className="flex-1 min-h-0 relative">
+            <Origin />
+            <div className="absolute left-0 right-0 bottom-0" style={{ top: 23 }}><MiniCal /></div>
+          </div>
+        </Frame>
+      </div>
+
+      <div className="flex items-start gap-3 mt-7 p-4 rounded-[12px]" style={{ background: "var(--color-accent-tint)", border: "1px solid color-mix(in oklab, var(--color-accent) 35%, transparent)", maxWidth: 1140 }}>
+        <I n="lightbulb" c="w-4 h-4 text-accent" s={{ marginTop: 2, flexShrink: 0 }} />
+        <div className="text-[12px] text-fg1" style={{ lineHeight: 1.6 }}>
+          <span className="font-semibold">Recommendation — put it on the app tab.</span> It's the only home that exists for both an open <em>and</em> a backgrounded app, it co-locates with Close (the action right beside it), and it speaks the lane's existing identity language (icon + name). The served-by hairline stays read-only system chrome; the window toolbar stays generic. Same gesture maps everywhere: ⋯ on active, right-click on any.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+const draw = () => window.lucide && window.lucide.createIcons();
+draw(); setTimeout(draw, 200); setTimeout(draw, 700);
+</script>
+</body>
+</html>
